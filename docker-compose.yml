@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: grocery-shopping-list
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      # Flask Configuration
+      - FLASK_CONFIG=config.ProductionConfig
+      - FLASK_DEBUG=0
+
+      # Security - WICHTIG: Ändern Sie diese Werte!
+      - SECRET_KEY=${SECRET_KEY:-change-this-secret-key-in-production}
+
+      # Database Configuration
+      - DATABASE_URL=sqlite:///instance/app.db
+
+    volumes:
+      # Persistente Datenbank
+      - ./instance:/app/instance
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/api/status', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    networks:
+      - grocery-network
+
+networks:
+  grocery-network:
+    driver: bridge
+
+volumes:
+  db_data:
+    driver: local

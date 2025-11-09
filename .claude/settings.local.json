@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(flask db migrate:*)",
+      "Bash(python3 -m venv:*)",
+      "Bash(source:*)",
+      "Bash(pip install:*)",
+      "Bash(flask db init:*)",
+      "Bash(flask db:*)",
+      "Bash(flask init-db:*)",
+      "Bash(curl:*)",
+      "Bash(flask list-users:*)",
+      "Bash(flask stats:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill -9)",
+      "Bash(awk:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

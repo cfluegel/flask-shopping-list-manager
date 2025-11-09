@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard - Einkaufsliste{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+  <!-- Page Header -->
+  <div style="margin-bottom: 2rem;">
+    <h1 style="margin-bottom: 0.5rem;">Admin Dashboard</h1>
+    <p class="text-muted" style="margin: 0;">Übersicht und Verwaltung der Anwendung</p>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 3rem;">
+    <!-- Total Users -->
+    <div class="card">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <div style="width: 48px; height: 48px; background-color: var(--color-primary); color: white; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+        </div>
+        <div>
+          <div style="font-size: 2rem; font-weight: 700; color: var(--color-text);">{{ total_users }}</div>
+          <div class="text-muted">Benutzer</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Lists -->
+    <div class="card">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <div style="width: 48px; height: 48px; background-color: var(--color-success); color: white; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+        </div>
+        <div>
+          <div style="font-size: 2rem; font-weight: 700; color: var(--color-text);">{{ total_lists }}</div>
+          <div class="text-muted">Einkaufslisten</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Items -->
+    <div class="card">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <div style="width: 48px; height: 48px; background-color: var(--color-info); color: white; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="9" cy="21" r="1"></circle>
+            <circle cx="20" cy="21" r="1"></circle>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+          </svg>
+        </div>
+        <div>
+          <div style="font-size: 2rem; font-weight: 700; color: var(--color-text);">{{ total_items }}</div>
+          <div class="text-muted">Artikel gesamt</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Links -->
+  <div class="card" style="margin-bottom: 3rem;">
+    <h2 style="margin-bottom: 1.5rem;">Verwaltung</h2>
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+      <a href="{{ url_for('main.admin_users') }}" class="btn btn-primary">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+        Benutzer verwalten
+      </a>
+      <a href="{{ url_for('main.admin_lists') }}" class="btn btn-secondary">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="8" y1="6" x2="21" y2="6"></line>
+          <line x1="8" y1="12" x2="21" y2="12"></line>
+          <line x1="8" y1="18" x2="21" y2="18"></line>
+          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+          <line x1="3" y1="18" x2="3.01" y2="18"></line>
+        </svg>
+        Listen verwalten
+      </a>
+    </div>
+  </div>
+
+  <!-- Recent Lists -->
+  <div class="card">
+    <h2 style="margin-bottom: 1.5rem;">Kürzlich erstellt</h2>
+    {% if recent_lists %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Titel</th>
+              <th>Besitzer</th>
+              <th>Artikel</th>
+              <th>Geteilt</th>
+              <th>Erstellt am</th>
+              <th>Aktionen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for list in recent_lists %}
+              <tr>
+                <td>
+                  <a href="{{ url_for('main.view_list', list_id=list.id) }}">{{ list.title }}</a>
+                </td>
+                <td>{{ list.owner.username }}</td>
+                <td>{{ list.items.count() }}</td>
+                <td>
+                  {% if list.is_shared %}
+                    <span class="badge badge-primary">Ja</span>
+                  {% else %}
+                    <span class="badge" style="background-color: var(--color-border); color: var(--color-text-muted);">Nein</span>
+                  {% endif %}
+                </td>
+                <td>{{ list.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                <td>
+                  <form method="POST" action="{{ url_for('main.admin_delete_list', list_id=list.id) }}" style="display: inline;" onsubmit="return confirm('Liste wirklich löschen?');">
+                    <button type="submit" class="btn btn-icon btn-sm btn-danger" aria-label="Löschen">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                      </svg>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-muted">Keine Listen vorhanden.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block title %}Benutzer bearbeiten - Admin{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+  <!-- Back Button -->
+  <a href="{{ url_for('main.admin_users') }}" class="btn btn-secondary" style="margin-bottom: 1.5rem;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="19" y1="12" x2="5" y2="12"></line>
+      <polyline points="12 19 5 12 12 5"></polyline>
+    </svg>
+    Zurück
+  </a>
+
+  <!-- Page Header -->
+  <h1 style="margin-bottom: 0.5rem;">Benutzer bearbeiten</h1>
+  <p class="text-muted" style="margin-bottom: 2rem;">Benutzer-Informationen aktualisieren</p>
+
+  <!-- Edit User Form -->
+  <div class="card" style="max-width: 600px;">
+    <form method="POST" action="{{ url_for('main.admin_edit_user', user_id=user.id) }}">
+      {{ form.hidden_tag() }}
+
+      <!-- Username Field -->
+      <div class="form-group">
+        <label for="username" class="form-label">Benutzername</label>
+        {{ form.username(class="form-control", id="username") }}
+        {% if form.username.errors %}
+          <div class="form-error">
+            {% for error in form.username.errors %}{{ error }}{% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Email Field -->
+      <div class="form-group">
+        <label for="email" class="form-label">E-Mail</label>
+        {{ form.email(class="form-control", id="email") }}
+        {% if form.email.errors %}
+          <div class="form-error">
+            {% for error in form.email.errors %}{{ error }}{% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Password Field (Optional) -->
+      <div class="form-group">
+        <label for="password" class="form-label">Neues Passwort (optional)</label>
+        {{ form.password(class="form-control", id="password", placeholder="Leer lassen um Passwort nicht zu ändern") }}
+        {% if form.password.errors %}
+          <div class="form-error">
+            {% for error in form.password.errors %}{{ error }}{% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Password Confirm Field -->
+      <div class="form-group">
+        <label for="password_confirm" class="form-label">Passwort bestätigen</label>
+        {{ form.password_confirm(class="form-control", id="password_confirm", placeholder="Nur bei Passwortänderung") }}
+        {% if form.password_confirm.errors %}
+          <div class="form-error">
+            {% for error in form.password_confirm.errors %}{{ error }}{% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Is Admin Field -->
+      <div class="form-group">
+        <div class="form-check">
+          {{ form.is_admin(id="is_admin") }}
+          <label for="is_admin">Administrator-Rechte</label>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <div class="form-group" style="margin-bottom: 0;">
+        <button type="submit" class="btn btn-primary btn-block">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            <polyline points="7 3 7 8 15 8"></polyline>
+          </svg>
+          Änderungen speichern
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Neue Liste erstellen - Einkaufsliste{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+  <!-- Back Button -->
+  <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary" style="margin-bottom: 1.5rem;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="19" y1="12" x2="5" y2="12"></line>
+      <polyline points="12 19 5 12 12 5"></polyline>
+    </svg>
+    Zurück
+  </a>
+
+  <!-- Page Header -->
+  <h1 style="margin-bottom: 0.5rem;">Neue Einkaufsliste erstellen</h1>
+  <p class="text-muted" style="margin-bottom: 2rem;">Gib deiner Liste einen Namen und lege fest, ob sie geteilt werden soll.</p>
+
+  <!-- Create List Form -->
+  <div class="card" style="max-width: 600px;">
+    <form method="POST" action="{{ url_for('main.create_list') }}">
+      {{ form.hidden_tag() }}
+
+      <!-- Title Field -->
+      <div class="form-group">
+        <label for="title" class="form-label">Listenname</label>
+        {{ form.title(class="form-control", id="title", placeholder="z.B. Wocheneinkauf, Geburtstagsparty...") }}
+        {% if form.title.errors %}
+          <div class="form-error">
+            {% for error in form.title.errors %}{{ error }}{% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Is Shared Field -->
+      <div class="form-group">
+        <div class="form-check">
+          {{ form.is_shared(id="is_shared") }}
+          <label for="is_shared">Liste öffentlich teilen</label>
+        </div>
+        <small class="text-muted" style="display: block; margin-top: 0.5rem; margin-left: 28px;">
+          Wenn aktiviert, kann die Liste über einen Link mit anderen geteilt werden, auch ohne Anmeldung.
+        </small>
+      </div>
+
+      <!-- Submit Button -->
+      <div class="form-group" style="margin-bottom: 0;">
+        <button type="submit" class="btn btn-primary btn-block">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+            <polyline points="7 3 7 8 15 8"></polyline>
+          </svg>
+          Liste erstellen
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

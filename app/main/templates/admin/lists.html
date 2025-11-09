@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}Listenverwaltung - Admin{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+  <!-- Back Button -->
+  <a href="{{ url_for('main.admin_dashboard') }}" class="btn btn-secondary" style="margin-bottom: 1.5rem;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="19" y1="12" x2="5" y2="12"></line>
+      <polyline points="12 19 5 12 12 5"></polyline>
+    </svg>
+    Zurück zum Dashboard
+  </a>
+
+  <!-- Page Header -->
+  <div style="margin-bottom: 2rem;">
+    <h1 style="margin-bottom: 0.5rem;">Listenverwaltung</h1>
+    <p class="text-muted" style="margin: 0;">Alle Einkaufslisten verwalten</p>
+  </div>
+
+  <!-- Lists Table -->
+  <div class="card">
+    {% if lists %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Titel</th>
+              <th>Besitzer</th>
+              <th>Artikel</th>
+              <th>Geteilt</th>
+              <th>Erstellt am</th>
+              <th>Aktualisiert am</th>
+              <th>Aktionen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for list in lists %}
+              <tr>
+                <td>
+                  <a href="{{ url_for('main.view_list', list_id=list.id) }}">{{ list.title }}</a>
+                </td>
+                <td>{{ list.owner.username }}</td>
+                <td>{{ list.items.count() }}</td>
+                <td>
+                  {% if list.is_shared %}
+                    <span class="badge badge-primary">Ja</span>
+                  {% else %}
+                    <span class="badge" style="background-color: var(--color-border); color: var(--color-text-muted);">Nein</span>
+                  {% endif %}
+                </td>
+                <td>{{ list.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                <td>{{ list.updated_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                <td>
+                  <div style="display: flex; gap: 0.5rem;">
+                    <a href="{{ url_for('main.view_list', list_id=list.id) }}" class="btn btn-icon btn-sm btn-secondary" aria-label="Ansehen">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    </a>
+                    <form method="POST" action="{{ url_for('main.admin_delete_list', list_id=list.id) }}" style="display: inline;" onsubmit="return confirm('Liste &quot;{{ list.title }}&quot; wirklich löschen?');">
+                      <button type="submit" class="btn btn-icon btn-sm btn-danger" aria-label="Löschen">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-muted" style="text-align: center; padding: 2rem;">Keine Listen vorhanden.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

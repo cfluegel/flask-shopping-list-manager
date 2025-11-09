@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ shopping_list.title }} - Einkaufsliste{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+  <!-- Back Button -->
+  <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary" style="margin-bottom: 1.5rem;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="19" y1="12" x2="5" y2="12"></line>
+      <polyline points="12 19 5 12 12 5"></polyline>
+    </svg>
+    Zurück zum Dashboard
+  </a>
+
+  <!-- Page Header -->
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+        <h1 style="margin: 0;">{{ shopping_list.title }}</h1>
+        {% if shopping_list.is_shared %}
+          <span class="badge badge-primary">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; vertical-align: middle; margin-right: 2px;">
+              <circle cx="18" cy="5" r="3"></circle>
+              <circle cx="6" cy="12" r="3"></circle>
+              <circle cx="18" cy="19" r="3"></circle>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+            </svg>
+            Geteilt
+          </span>
+        {% endif %}
+      </div>
+      <p class="text-muted" style="margin: 0;">Erstellt von {{ shopping_list.owner.username }} am {{ shopping_list.created_at.strftime('%d.%m.%Y') }}</p>
+    </div>
+    <a href="{{ url_for('main.edit_list', list_id=shopping_list.id) }}" class="btn btn-secondary">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+      </svg>
+      Bearbeiten
+    </a>
+  </div>
+
+  <!-- Share Section -->
+  {% if shopping_list.is_shared %}
+    <div class="share-section">
+      <h3 style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="18" cy="5" r="3"></circle>
+          <circle cx="6" cy="12" r="3"></circle>
+          <circle cx="18" cy="19" r="3"></circle>
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+        </svg>
+        Liste teilen
+      </h3>
+      <p class="text-muted" style="margin-bottom: 1rem;">Teile diesen Link mit anderen, um ihnen Zugriff auf diese Liste zu geben:</p>
+      <div class="share-link-display">
+        <input type="text" readonly class="share-link-input" id="share-link" value="{{ url_for('main.view_shared_list', guid=shopping_list.guid, _external=True) }}">
+        <button class="btn btn-primary" id="copy-share-link">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <span class="hide-mobile">Kopieren</span>
+        </button>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Add Item Section -->
+  <div class="add-item-section">
+    <h3 style="margin-bottom: 1rem;">Neuen Artikel hinzufügen</h3>
+    <form method="POST" action="{{ url_for('main.add_item', list_id=shopping_list.id) }}" class="form-inline" id="add-item-form">
+      {{ item_form.hidden_tag() }}
+
+      <div style="display: flex; gap: 0.5rem; flex: 1; flex-wrap: wrap;">
+        {{ item_form.quantity(class="form-control form-control-sm", placeholder="Anzahl", style="max-width: 100px;") }}
+        {{ item_form.name(class="form-control", placeholder="z.B. Milch, Brot, Äpfel...", style="flex: 1; min-width: 200px;") }}
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="add-item-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Hinzufügen
+      </button>
+    </form>
+  </div>
+
+  <!-- Shopping Items List -->
+  <div>
+    <h3 style="margin-bottom: 1rem;">Artikel ({{ items|length }})</h3>
+
+    {% if items %}
+      <ul class="shopping-items" id="shopping-items">
+        {% for item in items %}
+          <li class="shopping-item {% if item.is_checked %}checked{% endif %}" data-item-id="{{ item.id }}">
+            <!-- Checkbox -->
+            <input
+              type="checkbox"
+              class="shopping-item-checkbox"
+              {% if item.is_checked %}checked{% endif %}
+              data-item-id="{{ item.id }}"
+              aria-label="Artikel als erledigt markieren">
+
+            <!-- Item Content -->
+            <div class="shopping-item-content">
+              <span class="shopping-item-quantity">{{ item.quantity }}</span>
+              <span class="shopping-item-name">{{ item.name }}</span>
+            </div>
+
+            <!-- Actions -->
+            <div class="shopping-item-actions">
+              <form method="POST" action="{{ url_for('main.delete_item', item_id=item.id) }}" style="display: inline;" class="delete-item-form">
+                <button
+                  type="submit"
+                  class="btn btn-icon btn-danger btn-sm"
+                  aria-label="Artikel löschen"
+                  onclick="return confirm('Artikel &quot;{{ item.name }}&quot; wirklich löschen?');">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                  </svg>
+                </button>
+              </form>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <!-- Empty State -->
+      <div class="card" style="text-align: center; padding: 2rem;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin: 0 auto 1rem; color: var(--color-text-muted);">
+          <line x1="8" y1="6" x2="21" y2="6"></line>
+          <line x1="8" y1="12" x2="21" y2="12"></line>
+          <line x1="8" y1="18" x2="21" y2="18"></line>
+          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+          <line x1="3" y1="18" x2="3.01" y2="18"></line>
+        </svg>
+        <p class="text-muted" style="margin: 0;">Noch keine Artikel in dieser Liste. Füge deinen ersten Artikel oben hinzu!</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Share Link Copy Functionality
+  const copyButton = document.getElementById('copy-share-link');
+  if (copyButton) {
+    copyButton.addEventListener('click', () => {
+      const shareLink = document.getElementById('share-link');
+      shareLink.select();
+      document.execCommand('copy');
+
+      // Visual feedback
+      const originalText = copyButton.innerHTML;
+      copyButton.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> <span class="hide-mobile">Kopiert!</span>';
+
+      setTimeout(() => {
+        copyButton.innerHTML = originalText;
+      }, 2000);
+    });
+  }
+</script>
+{% endblock %}

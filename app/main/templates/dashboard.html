@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Einkaufsliste{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+  <!-- Page Header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="margin-bottom: 0.5rem;">Meine Einkaufslisten</h1>
+      <p class="text-muted" style="margin: 0;">Verwalte deine Einkäufe einfach und übersichtlich</p>
+    </div>
+    <a href="{{ url_for('main.create_list') }}" class="btn btn-primary">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+      Neue Liste erstellen
+    </a>
+  </div>
+
+  <!-- Shopping Lists Grid -->
+  {% if shopping_lists %}
+    <div class="lists-grid">
+      {% for list in shopping_lists %}
+        <a href="{{ url_for('main.view_list', list_id=list.id) }}" class="list-card">
+          <div class="list-card-header">
+            <h3 class="list-card-title">{{ list.title }}</h3>
+            {% if list.is_shared %}
+              <span class="list-card-badge">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; vertical-align: middle; margin-right: 2px;">
+                  <circle cx="18" cy="5" r="3"></circle>
+                  <circle cx="6" cy="12" r="3"></circle>
+                  <circle cx="18" cy="19" r="3"></circle>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                </svg>
+                Geteilt
+              </span>
+            {% endif %}
+          </div>
+
+          <div class="list-card-body">
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--color-text-secondary);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+              </svg>
+              <span>{{ list.items.count() }} Artikel</span>
+            </div>
+          </div>
+
+          <div class="list-card-meta">
+            <span title="Erstellt am {{ list.created_at.strftime('%d.%m.%Y %H:%M') }}">
+              Erstellt: {{ list.created_at.strftime('%d.%m.%Y') }}
+            </span>
+            <span title="Aktualisiert am {{ list.updated_at.strftime('%d.%m.%Y %H:%M') }}">
+              Aktualisiert: {{ list.updated_at.strftime('%d.%m.%Y') }}
+            </span>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <!-- Empty State -->
+    <div class="card" style="text-align: center; padding: 3rem; margin-top: 2rem;">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin: 0 auto 1.5rem; color: var(--color-text-muted);">
+        <circle cx="9" cy="21" r="1"></circle>
+        <circle cx="20" cy="21" r="1"></circle>
+        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+      </svg>
+      <h2 style="margin-bottom: 0.5rem; color: var(--color-text-secondary);">Noch keine Einkaufslisten</h2>
+      <p class="text-muted" style="margin-bottom: 1.5rem;">Erstelle deine erste Liste und beginne mit dem Einkaufen!</p>
+      <a href="{{ url_for('main.create_list') }}" class="btn btn-primary">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Erste Liste erstellen
+      </a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
