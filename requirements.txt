@@ -7,4 +7,15 @@ email-validator
 gunicorn
 requests
 
+# JWT Authentication
+flask-jwt-extended
+
+# API Serialization & Validation
+marshmallow
+marshmallow-sqlalchemy
+
+# CORS Support for Mobile Apps
+flask-cors
+
+# Testing
 pytest

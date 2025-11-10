@@ -14,7 +14,11 @@
       "Bash(flask stats:*)",
       "Bash(lsof:*)",
       "Bash(xargs kill -9)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(python -m flask db migrate:*)",
+      "Bash(python3:*)",
+      "Bash(python run.py:*)",
+      "Bash(ACCESS_TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc2Mjc2NDc1MywianRpIjoiYTQ2ZGYxMGItYWUyMC00N2IyLWI4NDQtZmEzNzY4MDg1MGMyIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6MywibmJmIjoxNzYyNzY0NzUzLCJjc3JmIjoiODQxYmY3MWYtMThkNi00ZDE4LWI4MzItNGIzY2I2ZjY2ZDM4IiwiZXhwIjoxNzYyNzY2NTUzfQ.7K129OkGUGQ-y_NEM7SlfJBbv5LGCTtFNzeELmekIBQ\")"
     ],
     "deny": [],
     "ask": []

@@ -76,6 +76,47 @@ class ShoppingListItem(db.Model):
     def __repr__(self) -> str:
         return f'<ShoppingListItem {self.name}>'
 
+class RevokedToken(db.Model):
+    """Revoked JWT tokens (Blacklist) for logout and token invalidation."""
+
+    __tablename__ = 'revoked_tokens'
+
+    id = db.Column(db.Integer, primary_key=True)
+    jti = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    token_type = db.Column(db.String(20), nullable=False)  # 'access' or 'refresh'
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    revoked_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+
+    def __repr__(self) -> str:
+        return f'<RevokedToken {self.jti}>'
+
+    @classmethod
+    def is_jti_blacklisted(cls, jti: str) -> bool:
+        """Check if a token's JTI is blacklisted."""
+        return cls.query.filter_by(jti=jti).first() is not None
+
+    @classmethod
+    def add_to_blacklist(cls, jti: str, token_type: str, user_id: int, expires_at: datetime) -> None:
+        """Add a token to the blacklist."""
+        revoked_token = cls(
+            jti=jti,
+            token_type=token_type,
+            user_id=user_id,
+            expires_at=expires_at
+        )
+        db.session.add(revoked_token)
+        db.session.commit()
+
+    @classmethod
+    def cleanup_expired_tokens(cls) -> int:
+        """Remove expired tokens from the blacklist. Returns count of deleted tokens."""
+        now = datetime.now(timezone.utc)
+        deleted = cls.query.filter(cls.expires_at < now).delete()
+        db.session.commit()
+        return deleted
+
+
 @login_manager.user_loader
 def load_user(user_id: str) -> User | None:
     # Flask-Login erwartet hier die Rückgabe eines User-Objekts oder None
