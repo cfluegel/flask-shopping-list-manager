@@ -277,6 +277,51 @@ def delete_item(item_id: int):
     return redirect(url_for('main.view_list', list_id=list_id))
 
 
+@main_bp.route('/items/<int:item_id>/edit', methods=['POST'])
+@login_required
+def edit_item(item_id: int):
+    """Edit an item in a shopping list (AJAX endpoint)."""
+    item = ShoppingListItem.query.get_or_404(item_id)
+    shopping_list = item.shopping_list
+
+    # Check access permissions
+    if not check_list_access(shopping_list, allow_shared=True):
+        return jsonify({'success': False, 'error': 'Keine Berechtigung'}), 403
+
+    form = ShoppingListItemForm()
+
+    if form.validate_on_submit():
+        # Update item
+        item.name = form.name.data.strip()
+        item.quantity = form.quantity.data.strip()
+        shopping_list.updated_at = datetime.now(timezone.utc)
+
+        try:
+            db.session.commit()
+
+            return jsonify({
+                'success': True,
+                'item': {
+                    'id': item.id,
+                    'name': item.name,
+                    'quantity': item.quantity,
+                    'is_checked': item.is_checked
+                }
+            })
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({
+                'success': False,
+                'error': 'Fehler beim Speichern'
+            }), 500
+
+    # Return validation errors
+    return jsonify({
+        'success': False,
+        'errors': {field: errors[0] for field, errors in form.errors.items()}
+    }), 400
+
+
 # ============================================================================
 # Admin Routes
 # ============================================================================

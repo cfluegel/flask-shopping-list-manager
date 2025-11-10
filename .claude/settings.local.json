@@ -18,7 +18,12 @@
       "Bash(python -m flask db migrate:*)",
       "Bash(python3:*)",
       "Bash(python run.py:*)",
-      "Bash(ACCESS_TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc2Mjc2NDc1MywianRpIjoiYTQ2ZGYxMGItYWUyMC00N2IyLWI4NDQtZmEzNzY4MDg1MGMyIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6MywibmJmIjoxNzYyNzY0NzUzLCJjc3JmIjoiODQxYmY3MWYtMThkNi00ZDE4LWI4MzItNGIzY2I2ZjY2ZDM4IiwiZXhwIjoxNzYyNzY2NTUzfQ.7K129OkGUGQ-y_NEM7SlfJBbv5LGCTtFNzeELmekIBQ\")"
+      "Bash(ACCESS_TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc2Mjc2NDc1MywianRpIjoiYTQ2ZGYxMGItYWUyMC00N2IyLWI4NDQtZmEzNzY4MDg1MGMyIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6MywibmJmIjoxNzYyNzY0NzUzLCJjc3JmIjoiODQxYmY3MWYtMThkNi00ZDE4LWI4MzItNGIzY2I2ZjY2ZDM4IiwiZXhwIjoxNzYyNzY2NTUzfQ.7K129OkGUGQ-y_NEM7SlfJBbv5LGCTtFNzeELmekIBQ\")",
+      "Bash(flask routes:*)",
+      "Bash(python -m flask:*)",
+      "Bash(/Library/Frameworks/Python.framework/Versions/3.13/bin/python3:*)",
+      "Bash(chmod:*)",
+      "Bash(node -c:*)"
     ],
     "deny": [],
     "ask": []

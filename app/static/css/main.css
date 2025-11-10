@@ -1028,3 +1028,120 @@ textarea.form-control {
     break-inside: avoid;
   }
 }
+
+/* ============================================================================
+ * Item Inline Editing
+ * ============================================================================ */
+
+/* Edit Form Container */
+.shopping-item-edit-form {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex: 1;
+  align-items: center;
+}
+
+.shopping-item-edit-form .item-edit-quantity {
+  max-width: 100px;
+  min-width: 60px;
+}
+
+.shopping-item-edit-form .item-edit-name {
+  flex: 1;
+  min-width: 150px;
+}
+
+/* Edit Mode State */
+.shopping-item[data-editing="true"] .shopping-item-content {
+  display: none;
+}
+
+.shopping-item[data-editing="true"] .shopping-item-edit-form {
+  display: flex !important;
+}
+
+.shopping-item[data-editing="true"] .item-edit-btn {
+  display: none !important;
+}
+
+.shopping-item[data-editing="true"] .item-save-btn,
+.shopping-item[data-editing="true"] .item-cancel-btn {
+  display: inline-flex !important;
+}
+
+/* Button Colors */
+.btn-success {
+  background-color: var(--color-success);
+  color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+  background-color: #43a047;
+  text-decoration: none;
+  color: white;
+}
+
+/* Focus Styles for Edit Inputs */
+.shopping-item-edit-form .form-control:focus {
+  outline: none;
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px rgba(255, 140, 66, 0.1);
+}
+
+/* Loading State for Edit */
+.shopping-item.item-saving {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.shopping-item.item-saving .item-save-btn {
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Accessibility: Ensure sufficient contrast for edit mode */
+.shopping-item-edit-form .form-control {
+  border: 2px solid var(--color-border);
+}
+
+.shopping-item-edit-form .form-control:focus {
+  border-width: 2px;
+}
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 767px) {
+  .shopping-item-edit-form {
+    flex-wrap: nowrap;
+  }
+
+  .shopping-item-edit-form .item-edit-quantity {
+    max-width: 70px;
+    min-width: 50px;
+    font-size: var(--font-size-sm);
+  }
+
+  .shopping-item-edit-form .item-edit-name {
+    min-width: 100px;
+    font-size: var(--font-size-sm);
+  }
+
+  /* Ensure action buttons don't wrap on mobile during edit */
+  .shopping-item[data-editing="true"] .shopping-item-actions {
+    gap: 0.25rem;
+  }
+
+  /* Touch-friendly sizing for mobile */
+  .shopping-item-actions .btn-icon {
+    min-width: 44px;
+    min-height: 44px;
+    padding: var(--spacing-sm);
+  }
+}

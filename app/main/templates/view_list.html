@@ -106,14 +106,68 @@
               data-item-id="{{ item.id }}"
               aria-label="Artikel als erledigt markieren">
 
-            <!-- Item Content -->
+            <!-- Item Content (Display Mode) -->
             <div class="shopping-item-content">
               <span class="shopping-item-quantity">{{ item.quantity }}</span>
               <span class="shopping-item-name">{{ item.name }}</span>
             </div>
 
+            <!-- Item Content (Edit Mode) - Hidden by default -->
+            <div class="shopping-item-edit-form" style="display: none;">
+              <input
+                type="text"
+                class="form-control form-control-sm item-edit-quantity"
+                value="{{ item.quantity }}"
+                placeholder="Anzahl"
+                aria-label="Anzahl bearbeiten">
+              <input
+                type="text"
+                class="form-control item-edit-name"
+                value="{{ item.name }}"
+                placeholder="Artikelname"
+                aria-label="Artikelname bearbeiten">
+            </div>
+
             <!-- Actions -->
             <div class="shopping-item-actions">
+              <!-- Edit Button (Display Mode) -->
+              <button
+                type="button"
+                class="btn btn-icon btn-secondary btn-sm item-edit-btn"
+                aria-label="Artikel bearbeiten"
+                data-item-id="{{ item.id }}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+              </button>
+
+              <!-- Save Button (Edit Mode) - Hidden by default -->
+              <button
+                type="button"
+                class="btn btn-icon btn-success btn-sm item-save-btn"
+                aria-label="Änderungen speichern"
+                data-item-id="{{ item.id }}"
+                style="display: none;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </button>
+
+              <!-- Cancel Button (Edit Mode) - Hidden by default -->
+              <button
+                type="button"
+                class="btn btn-icon btn-secondary btn-sm item-cancel-btn"
+                aria-label="Bearbeitung abbrechen"
+                data-item-id="{{ item.id }}"
+                style="display: none;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+
+              <!-- Delete Button (Always visible) -->
               <form method="POST" action="{{ url_for('main.delete_item', item_id=item.id) }}" style="display: inline;" class="delete-item-form">
                 <button
                   type="submit"

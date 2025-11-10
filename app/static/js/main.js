@@ -195,6 +195,9 @@ class ShoppingListManager {
     // Attach event listeners to checkboxes
     this.attachCheckboxListeners();
 
+    // Attach event listeners for inline editing
+    this.attachEditListeners();
+
     // Handle form submission via AJAX (optional enhancement)
     if (this.addItemForm) {
       this.enhanceAddItemForm();
@@ -343,6 +346,203 @@ class ShoppingListManager {
         toast.remove();
       }, 300);
     }, 5000);
+  }
+
+  attachEditListeners() {
+    // Edit button clicks
+    const editButtons = document.querySelectorAll('.item-edit-btn');
+    console.log('[Shopping List] Found edit buttons:', editButtons.length);
+
+    if (editButtons.length === 0) {
+      console.warn('[Shopping List] No edit buttons found! Check if items are rendered.');
+    }
+
+    editButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const itemId = e.currentTarget.dataset.itemId;
+        console.log('[Shopping List] Edit button clicked for item:', itemId);
+        this.enterEditMode(itemId);
+      });
+    });
+
+    // Save button clicks
+    const saveButtons = document.querySelectorAll('.item-save-btn');
+    console.log('Found save buttons:', saveButtons.length);
+    saveButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const itemId = e.currentTarget.dataset.itemId;
+        console.log('Save button clicked for item:', itemId);
+        this.saveItem(itemId);
+      });
+    });
+
+    // Cancel button clicks
+    const cancelButtons = document.querySelectorAll('.item-cancel-btn');
+    console.log('Found cancel buttons:', cancelButtons.length);
+    cancelButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const itemId = e.currentTarget.dataset.itemId;
+        console.log('Cancel button clicked for item:', itemId);
+        this.cancelEdit(itemId);
+      });
+    });
+
+    // Handle Enter key in edit inputs
+    const editInputs = document.querySelectorAll('.shopping-item-edit-form input');
+    editInputs.forEach(input => {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const itemId = e.target.closest('.shopping-item').dataset.itemId;
+          this.saveItem(itemId);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          const itemId = e.target.closest('.shopping-item').dataset.itemId;
+          this.cancelEdit(itemId);
+        }
+      });
+    });
+  }
+
+  enterEditMode(itemId) {
+    console.log('[Shopping List] Entering edit mode for item:', itemId);
+    const listItem = document.querySelector(`.shopping-item[data-item-id="${itemId}"]`);
+
+    if (!listItem) {
+      console.error('[Shopping List] Could not find list item with id:', itemId);
+      return;
+    }
+
+    console.log('[Shopping List] Found list item:', listItem);
+
+    // Store original values for cancel
+    const quantitySpan = listItem.querySelector('.shopping-item-quantity');
+    const nameSpan = listItem.querySelector('.shopping-item-name');
+
+    if (!quantitySpan || !nameSpan) {
+      console.error('[Shopping List] Could not find quantity or name span');
+      return;
+    }
+
+    listItem.dataset.originalQuantity = quantitySpan.textContent;
+    listItem.dataset.originalName = nameSpan.textContent;
+
+    console.log('[Shopping List] Stored original values:', {
+      quantity: listItem.dataset.originalQuantity,
+      name: listItem.dataset.originalName
+    });
+
+    // Set edit mode
+    listItem.setAttribute('data-editing', 'true');
+    console.log('[Shopping List] Set data-editing attribute to true');
+
+    // Focus the name input
+    const nameInput = listItem.querySelector('.item-edit-name');
+    if (nameInput) {
+      nameInput.focus();
+      // Select text for easy editing
+      nameInput.select();
+      console.log('[Shopping List] Focused and selected name input');
+    } else {
+      console.error('[Shopping List] Could not find name input');
+    }
+  }
+
+  cancelEdit(itemId) {
+    const listItem = document.querySelector(`.shopping-item[data-item-id="${itemId}"]`);
+    if (!listItem) return;
+
+    // Restore original values
+    const quantityInput = listItem.querySelector('.item-edit-quantity');
+    const nameInput = listItem.querySelector('.item-edit-name');
+
+    quantityInput.value = listItem.dataset.originalQuantity || '';
+    nameInput.value = listItem.dataset.originalName || '';
+
+    // Exit edit mode
+    listItem.removeAttribute('data-editing');
+
+    // Clean up stored data
+    delete listItem.dataset.originalQuantity;
+    delete listItem.dataset.originalName;
+  }
+
+  async saveItem(itemId) {
+    const listItem = document.querySelector(`.shopping-item[data-item-id="${itemId}"]`);
+    if (!listItem) return;
+
+    const quantityInput = listItem.querySelector('.item-edit-quantity');
+    const nameInput = listItem.querySelector('.item-edit-name');
+
+    const newQuantity = quantityInput.value.trim();
+    const newName = nameInput.value.trim();
+
+    // Validation
+    if (!newName) {
+      this.showToast('Artikelname darf nicht leer sein', 'warning');
+      nameInput.focus();
+      return;
+    }
+
+    if (!newQuantity) {
+      this.showToast('Anzahl darf nicht leer sein', 'warning');
+      quantityInput.focus();
+      return;
+    }
+
+    // Show loading state
+    listItem.classList.add('item-saving');
+
+    try {
+      // Get CSRF token
+      const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
+
+      const formData = new FormData();
+      formData.append('name', newName);
+      formData.append('quantity', newQuantity);
+      formData.append('csrf_token', csrfToken);
+
+      const response = await fetch(`/items/${itemId}/edit`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update display values
+        const quantitySpan = listItem.querySelector('.shopping-item-quantity');
+        const nameSpan = listItem.querySelector('.shopping-item-name');
+
+        quantitySpan.textContent = data.item.quantity;
+        nameSpan.textContent = data.item.name;
+
+        // Exit edit mode
+        listItem.removeAttribute('data-editing');
+
+        // Clean up stored data
+        delete listItem.dataset.originalQuantity;
+        delete listItem.dataset.originalName;
+
+        this.showToast('Artikel erfolgreich aktualisiert', 'success');
+      } else {
+        // Show validation errors
+        const errorMessages = data.errors ? Object.values(data.errors).join(', ') : 'Fehler beim Speichern';
+        this.showToast(errorMessages, 'danger');
+      }
+    } catch (error) {
+      console.error('Error saving item:', error);
+      this.showToast('Netzwerkfehler beim Speichern', 'danger');
+    } finally {
+      listItem.classList.remove('item-saving');
+    }
   }
 }
 
