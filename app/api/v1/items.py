@@ -48,12 +48,12 @@ def get_items(list_id: int):
         403: Forbidden
         404: List not found
     """
-    shopping_list = ShoppingList.query.get(list_id)
+    shopping_list = ShoppingList.active().filter_by(id=list_id).first()
 
     if not shopping_list:
         raise NotFoundError('Einkaufsliste nicht gefunden')
 
-    items = shopping_list.items.order_by(ShoppingListItem.order_index.desc()).all()
+    items = ShoppingListItem.active().filter_by(shopping_list_id=list_id).order_by(ShoppingListItem.order_index.desc()).all()
 
     items_data = [
         {
@@ -94,7 +94,7 @@ def create_item(list_id: int):
         403: Forbidden
         404: List not found
     """
-    shopping_list = ShoppingList.query.get(list_id)
+    shopping_list = ShoppingList.active().filter_by(id=list_id).first()
 
     if not shopping_list:
         raise NotFoundError('Einkaufsliste nicht gefunden')
@@ -113,9 +113,10 @@ def create_item(list_id: int):
             details=err.messages
         )
 
-    # Get the highest order_index and add 1
-    max_order = db.session.query(db.func.max(ShoppingListItem.order_index)).filter_by(
-        shopping_list_id=list_id
+    # Get the highest order_index and add 1 (only from active items)
+    max_order = db.session.query(db.func.max(ShoppingListItem.order_index)).filter(
+        ShoppingListItem.shopping_list_id == list_id,
+        ShoppingListItem.deleted_at.is_(None)
     ).scalar() or 0
 
     # Create new item
@@ -167,7 +168,7 @@ def get_item(item_id: int):
         403: Forbidden
         404: Item not found
     """
-    item = ShoppingListItem.query.get(item_id)
+    item = ShoppingListItem.active().filter_by(id=item_id).first()
 
     if not item:
         raise NotFoundError('Artikel nicht gefunden')
@@ -221,7 +222,7 @@ def update_item(item_id: int):
         403: Forbidden
         404: Item not found
     """
-    item = ShoppingListItem.query.get(item_id)
+    item = ShoppingListItem.active().filter_by(id=item_id).first()
 
     if not item:
         raise NotFoundError('Artikel nicht gefunden')
@@ -284,18 +285,18 @@ def update_item(item_id: int):
 @limiter.limit("30 per minute")
 def delete_item(item_id: int):
     """
-    Delete a shopping list item.
+    Soft delete a shopping list item (move to trash).
 
     Path Parameters:
         item_id (int): Item ID
 
     Returns:
-        200: Item deleted successfully
+        200: Item moved to trash successfully
         401: Unauthorized
         403: Forbidden
         404: Item not found
     """
-    item = ShoppingListItem.query.get(item_id)
+    item = ShoppingListItem.active().filter_by(id=item_id).first()
 
     if not item:
         raise NotFoundError('Artikel nicht gefunden')
@@ -312,19 +313,18 @@ def delete_item(item_id: int):
         raise ForbiddenError('Zugriff auf diesen Artikel nicht erlaubt')
 
     item_name = item.name
-    user = get_current_user()
 
-    db.session.delete(item)
+    item.soft_delete()
     shopping_list.updated_at = datetime.now(timezone.utc)
     db.session.commit()
 
     current_app.logger.info(
         f'Benutzer "{user.username}" (ID: {user.id}) hat via API Artikel '
-        f'"{item_name}" (ID: {item_id}) gelöscht'
+        f'"{item_name}" (ID: {item_id}) in den Papierkorb verschoben'
     )
 
     return success_response(
-        message=f'Artikel "{item_name}" erfolgreich gelöscht'
+        message=f'Artikel "{item_name}" wurde in den Papierkorb verschoben'
     )
 
 
@@ -347,7 +347,7 @@ def toggle_item(item_id: int):
         403: Forbidden
         404: Item not found
     """
-    item = ShoppingListItem.query.get(item_id)
+    item = ShoppingListItem.active().filter_by(id=item_id).first()
 
     if not item:
         raise NotFoundError('Artikel nicht gefunden')
@@ -402,7 +402,7 @@ def reorder_item(item_id: int):
         403: Forbidden
         404: Item not found
     """
-    item = ShoppingListItem.query.get(item_id)
+    item = ShoppingListItem.active().filter_by(id=item_id).first()
 
     if not item:
         raise NotFoundError('Artikel nicht gefunden')
@@ -467,21 +467,110 @@ def clear_checked_items(list_id: int):
         403: Forbidden
         404: List not found
     """
-    shopping_list = ShoppingList.query.get(list_id)
+    shopping_list = ShoppingList.active().filter_by(id=list_id).first()
 
     if not shopping_list:
         raise NotFoundError('Einkaufsliste nicht gefunden')
 
-    # Delete all checked items
-    deleted_count = ShoppingListItem.query.filter_by(
+    # Soft delete all checked items
+    checked_items = ShoppingListItem.active().filter_by(
         shopping_list_id=list_id,
         is_checked=True
-    ).delete()
+    ).all()
 
+    for item in checked_items:
+        item.soft_delete()
+
+    deleted_count = len(checked_items)
     shopping_list.updated_at = datetime.now(timezone.utc)
     db.session.commit()
 
     return success_response(
         data={'deleted_count': deleted_count},
-        message=f'{deleted_count} abgehakte Artikel wurden entfernt'
+        message=f'{deleted_count} abgehakte Artikel wurden in den Papierkorb verschoben'
+    )
+
+
+# ============================================================================
+# Trash Management (Papierkorb)
+# ============================================================================
+
+@v1_bp.route('/trash/items', methods=['GET'])
+@jwt_required()
+def get_trash_items():
+    """
+    Get all deleted items for the current user (trash).
+
+    Returns:
+        200: List of deleted items
+        401: Unauthorized
+    """
+    user = get_current_user()
+
+    # Get all deleted items from user's lists
+    deleted_items = ShoppingListItem.deleted().join(ShoppingList).filter(
+        ShoppingList.user_id == user.id
+    ).order_by(ShoppingListItem.deleted_at.desc()).all()
+
+    items_data = [
+        {
+            'id': item.id,
+            'name': item.name,
+            'quantity': item.quantity,
+            'is_checked': item.is_checked,
+            'order_index': item.order_index,
+            'created_at': item.created_at.isoformat(),
+            'deleted_at': item.deleted_at.isoformat(),
+            'list_id': item.shopping_list.id,
+            'list_title': item.shopping_list.title
+        }
+        for item in deleted_items
+    ]
+
+    return success_response(data=items_data)
+
+
+@v1_bp.route('/items/<int:item_id>/restore', methods=['POST'])
+@jwt_required()
+@limiter.limit("30 per minute")
+def restore_item(item_id: int):
+    """
+    Restore an item from trash.
+
+    Path Parameters:
+        item_id (int): Item ID
+
+    Returns:
+        200: Item restored successfully
+        401: Unauthorized
+        403: Forbidden
+        404: Item not found
+    """
+    item = ShoppingListItem.deleted().filter_by(id=item_id).first()
+
+    if not item:
+        raise NotFoundError('Artikel nicht im Papierkorb gefunden')
+
+    shopping_list = item.shopping_list
+    user = get_current_user()
+
+    # Check access permissions
+    is_owner = shopping_list.user_id == user.id
+    is_admin = user.is_admin
+
+    if not (is_owner or is_admin):
+        raise ForbiddenError('Keine Berechtigung, diesen Artikel wiederherzustellen')
+
+    item_name = item.name
+    item.restore()
+    shopping_list.updated_at = datetime.now(timezone.utc)
+    db.session.commit()
+
+    current_app.logger.info(
+        f'Benutzer "{user.username}" (ID: {user.id}) hat via API Artikel '
+        f'"{item_name}" (ID: {item_id}) aus dem Papierkorb wiederhergestellt'
+    )
+
+    return success_response(
+        message=f'Artikel "{item_name}" wurde wiederhergestellt'
     )

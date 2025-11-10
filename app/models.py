@@ -47,6 +47,7 @@ class ShoppingList(db.Model):
     is_shared = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+    deleted_at = db.Column(db.DateTime, nullable=True, default=None, index=True)
 
     # Relationships
     items = db.relationship('ShoppingListItem', backref='shopping_list', lazy='dynamic', cascade='all, delete-orphan', order_by='ShoppingListItem.order_index')
@@ -58,6 +59,39 @@ class ShoppingList(db.Model):
         """Get the sharing URL for this list."""
         from flask import url_for
         return url_for('main.view_shared_list', guid=self.guid, _external=True)
+
+    def soft_delete(self) -> None:
+        """Mark this list as deleted and cascade to all items."""
+        self.deleted_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(timezone.utc)
+
+        # Cascade soft delete to all items
+        for item in self.items:
+            item.soft_delete()
+
+    def restore(self) -> None:
+        """Restore this list from trash and cascade to all items."""
+        self.deleted_at = None
+        self.updated_at = datetime.now(timezone.utc)
+
+        # Cascade restore to all items
+        for item in self.items:
+            item.restore()
+
+    @property
+    def is_deleted(self) -> bool:
+        """Check if this list is soft deleted."""
+        return self.deleted_at is not None
+
+    @classmethod
+    def active(cls):
+        """Query for active (non-deleted) lists."""
+        return cls.query.filter(cls.deleted_at.is_(None))
+
+    @classmethod
+    def deleted(cls):
+        """Query for deleted lists (trash)."""
+        return cls.query.filter(cls.deleted_at.isnot(None))
 
 
 class ShoppingListItem(db.Model):
@@ -72,9 +106,33 @@ class ShoppingListItem(db.Model):
     is_checked = db.Column(db.Boolean, default=False, nullable=False)
     order_index = db.Column(db.Integer, nullable=False, default=0)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    deleted_at = db.Column(db.DateTime, nullable=True, default=None, index=True)
 
     def __repr__(self) -> str:
         return f'<ShoppingListItem {self.name}>'
+
+    def soft_delete(self) -> None:
+        """Mark this item as deleted."""
+        self.deleted_at = datetime.now(timezone.utc)
+
+    def restore(self) -> None:
+        """Restore this item from trash."""
+        self.deleted_at = None
+
+    @property
+    def is_deleted(self) -> bool:
+        """Check if this item is soft deleted."""
+        return self.deleted_at is not None
+
+    @classmethod
+    def active(cls):
+        """Query for active (non-deleted) items."""
+        return cls.query.filter(cls.deleted_at.is_(None))
+
+    @classmethod
+    def deleted(cls):
+        """Query for deleted items (trash)."""
+        return cls.query.filter(cls.deleted_at.isnot(None))
 
 class RevokedToken(db.Model):
     """Revoked JWT tokens (Blacklist) for logout and token invalidation."""

@@ -54,15 +54,16 @@ def get_lists():
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 20, type=int), 100)
 
-    pagination = user.shopping_lists.order_by(desc(ShoppingList.updated_at)).paginate(
+    pagination = ShoppingList.active().filter_by(user_id=user.id).order_by(desc(ShoppingList.updated_at)).paginate(
         page=page,
         per_page=per_page,
         error_out=False
     )
 
-    # Serialize lists with item count
+    # Serialize lists with item count (only active items)
     lists_data = []
     for shopping_list in pagination.items:
+        item_count = ShoppingListItem.active().filter_by(shopping_list_id=shopping_list.id).count()
         list_data = {
             'id': shopping_list.id,
             'guid': shopping_list.guid,
@@ -72,7 +73,7 @@ def get_lists():
             'owner_username': shopping_list.owner.username,
             'created_at': shopping_list.created_at.isoformat(),
             'updated_at': shopping_list.updated_at.isoformat(),
-            'item_count': shopping_list.items.count()
+            'item_count': item_count
         }
         lists_data.append(list_data)
 
@@ -95,12 +96,12 @@ def get_list(list_id: int):
         403: Forbidden
         404: List not found
     """
-    shopping_list = ShoppingList.query.get(list_id)
+    shopping_list = ShoppingList.active().filter_by(id=list_id).first()
 
     if not shopping_list:
         raise NotFoundError('Einkaufsliste nicht gefunden')
 
-    items = shopping_list.items.order_by(ShoppingListItem.order_index.desc()).all()
+    items = ShoppingListItem.active().filter_by(shopping_list_id=shopping_list.id).order_by(ShoppingListItem.order_index.desc()).all()
 
     list_data = {
         'id': shopping_list.id,
@@ -218,7 +219,7 @@ def update_list(list_id: int):
         403: Forbidden
         404: List not found
     """
-    shopping_list = ShoppingList.query.get(list_id)
+    shopping_list = ShoppingList.active().filter_by(id=list_id).first()
 
     if not shopping_list:
         raise NotFoundError('Einkaufsliste nicht gefunden')
@@ -259,6 +260,7 @@ def update_list(list_id: int):
         f'{list_id} aktualisiert'
     )
 
+    item_count = ShoppingListItem.active().filter_by(shopping_list_id=shopping_list.id).count()
     list_data = {
         'id': shopping_list.id,
         'guid': shopping_list.guid,
@@ -268,7 +270,7 @@ def update_list(list_id: int):
         'owner_username': shopping_list.owner.username,
         'created_at': shopping_list.created_at.isoformat(),
         'updated_at': shopping_list.updated_at.isoformat(),
-        'item_count': shopping_list.items.count()
+        'item_count': item_count
     }
 
     return success_response(
@@ -283,38 +285,38 @@ def update_list(list_id: int):
 @limiter.limit("30 per minute")
 def delete_list(list_id: int):
     """
-    Delete a shopping list.
+    Soft delete a shopping list (move to trash).
 
-    This will also delete all items in the list.
+    This will also soft delete all items in the list.
 
     Path Parameters:
         list_id (int): Shopping list ID
 
     Returns:
-        200: List deleted successfully
+        200: List moved to trash successfully
         401: Unauthorized
         403: Forbidden
         404: List not found
     """
-    shopping_list = ShoppingList.query.get(list_id)
+    shopping_list = ShoppingList.active().filter_by(id=list_id).first()
 
     if not shopping_list:
         raise NotFoundError('Einkaufsliste nicht gefunden')
 
     title = shopping_list.title
     user = get_current_user()
-    item_count = shopping_list.items.count()
+    item_count = ShoppingListItem.active().filter_by(shopping_list_id=list_id).count()
 
-    db.session.delete(shopping_list)
+    shopping_list.soft_delete()
     db.session.commit()
 
     current_app.logger.info(
         f'Benutzer "{user.username}" (ID: {user.id}) hat via API Liste '
-        f'"{title}" (ID: {list_id}) mit {item_count} Artikeln gelöscht'
+        f'"{title}" (ID: {list_id}) mit {item_count} Artikeln in den Papierkorb verschoben'
     )
 
     return success_response(
-        message=f'Einkaufsliste "{title}" erfolgreich gelöscht'
+        message=f'Einkaufsliste "{title}" wurde in den Papierkorb verschoben'
     )
 
 
@@ -344,7 +346,7 @@ def toggle_share_list(list_id: int):
         403: Forbidden
         404: List not found
     """
-    shopping_list = ShoppingList.query.get(list_id)
+    shopping_list = ShoppingList.active().filter_by(id=list_id).first()
 
     if not shopping_list:
         raise NotFoundError('Einkaufsliste nicht gefunden')
@@ -400,7 +402,7 @@ def get_share_url(list_id: int):
         403: Forbidden
         404: List not found
     """
-    shopping_list = ShoppingList.query.get(list_id)
+    shopping_list = ShoppingList.active().filter_by(id=list_id).first()
 
     if not shopping_list:
         raise NotFoundError('Einkaufsliste nicht gefunden')
@@ -420,4 +422,139 @@ def get_share_url(list_id: int):
             'full_api_url': request.host_url.rstrip('/') + api_url,
             'full_web_url': request.host_url.rstrip('/') + web_url
         }
+    )
+
+
+# ============================================================================
+# Trash Management (Papierkorb)
+# ============================================================================
+
+@v1_bp.route('/trash/lists', methods=['GET'])
+@jwt_required()
+def get_trash_lists():
+    """
+    Get all deleted shopping lists for the current user (trash).
+
+    Query Parameters:
+        page (int): Page number (default: 1)
+        per_page (int): Items per page (default: 20, max: 100)
+
+    Returns:
+        200: Paginated list of deleted shopping lists
+        401: Unauthorized
+    """
+    user = get_current_user()
+
+    page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', 20, type=int), 100)
+
+    pagination = ShoppingList.deleted().filter_by(user_id=user.id).order_by(desc(ShoppingList.deleted_at)).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+
+    # Serialize lists with item count
+    lists_data = []
+    for shopping_list in pagination.items:
+        item_count = shopping_list.items.count()
+        list_data = {
+            'id': shopping_list.id,
+            'guid': shopping_list.guid,
+            'title': shopping_list.title,
+            'is_shared': shopping_list.is_shared,
+            'owner_id': shopping_list.user_id,
+            'owner_username': shopping_list.owner.username,
+            'created_at': shopping_list.created_at.isoformat(),
+            'updated_at': shopping_list.updated_at.isoformat(),
+            'deleted_at': shopping_list.deleted_at.isoformat(),
+            'item_count': item_count
+        }
+        lists_data.append(list_data)
+
+    return paginated_response(lists_data, pagination)
+
+
+@v1_bp.route('/lists/<int:list_id>/restore', methods=['POST'])
+@jwt_required()
+@list_owner_or_admin_required()
+@limiter.limit("30 per minute")
+def restore_list(list_id: int):
+    """
+    Restore a shopping list from trash.
+
+    This will also restore all items in the list.
+
+    Path Parameters:
+        list_id (int): Shopping list ID
+
+    Returns:
+        200: List restored successfully
+        401: Unauthorized
+        403: Forbidden
+        404: List not found
+    """
+    shopping_list = ShoppingList.deleted().filter_by(id=list_id).first()
+
+    if not shopping_list:
+        raise NotFoundError('Einkaufsliste nicht im Papierkorb gefunden')
+
+    title = shopping_list.title
+    user = get_current_user()
+
+    shopping_list.restore()
+    db.session.commit()
+
+    current_app.logger.info(
+        f'Benutzer "{user.username}" (ID: {user.id}) hat via API Liste '
+        f'"{title}" (ID: {list_id}) aus dem Papierkorb wiederhergestellt'
+    )
+
+    return success_response(
+        message=f'Einkaufsliste "{title}" wurde wiederhergestellt'
+    )
+
+
+@v1_bp.route('/trash/lists/<int:list_id>', methods=['DELETE'])
+@jwt_required()
+@limiter.limit("20 per hour")
+def permanent_delete_list(list_id: int):
+    """
+    Permanently delete a shopping list (admin only).
+
+    This action is irreversible.
+
+    Path Parameters:
+        list_id (int): Shopping list ID
+
+    Returns:
+        200: List permanently deleted
+        401: Unauthorized
+        403: Forbidden (non-admin)
+        404: List not found
+    """
+    user = get_current_user()
+
+    # Only admins can permanently delete
+    if not user.is_admin:
+        raise ForbiddenError('Nur Administratoren können Listen endgültig löschen')
+
+    shopping_list = ShoppingList.deleted().filter_by(id=list_id).first()
+
+    if not shopping_list:
+        raise NotFoundError('Einkaufsliste nicht im Papierkorb gefunden')
+
+    title = shopping_list.title
+    item_count = shopping_list.items.count()
+
+    db.session.delete(shopping_list)
+    db.session.commit()
+
+    current_app.logger.warning(
+        f'Admin "{user.username}" (ID: {user.id}) hat via API Liste '
+        f'"{title}" (ID: {list_id}) mit {item_count} Artikeln endgültig gelöscht'
+    )
+
+    return success_response(
+        message=f'Einkaufsliste "{title}" wurde endgültig gelöscht'
     )

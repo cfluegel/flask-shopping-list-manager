@@ -32,7 +32,16 @@
       "Bash(echo:*)",
       "Bash(done)",
       "Bash(/tmp/login.json)",
-      "Bash(/tmp/token.txt)"
+      "Bash(/tmp/token.txt)",
+      "Bash(flask --help:*)",
+      "Bash(flask trash-stats:*)",
+      "Bash(flask cleanup-trash:*)",
+      "Bash(python test_soft_delete.py:*)",
+      "Bash(/Library/Frameworks/Python.framework/Versions/3.11/bin/python3:*)",
+      "Bash(/tmp/newlogin2.json)",
+      "Bash(__NEW_LINE__ python3 -c \"import json; print(json.load(open(''/tmp/newlogin2.json''))[''data''][''tokens''][''access_token''])\")",
+      "Bash(/tmp/token2.txt)",
+      "Bash(__NEW_LINE__ echo \"Neuer Token erhalten\")"
     ],
     "deny": [],
     "ask": []
