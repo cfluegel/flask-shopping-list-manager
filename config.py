@@ -28,6 +28,17 @@ class Config:
     API_DEFAULT_PER_PAGE = 20
     API_MAX_PER_PAGE = 100
 
+    # Rate Limiting Configuration
+    RATELIMIT_STORAGE_URL = os.environ.get('RATELIMIT_STORAGE_URL', 'memory://')
+    RATELIMIT_STRATEGY = 'fixed-window'
+    RATELIMIT_HEADERS_ENABLED = True
+
+    # Logging Configuration
+    LOG_TO_FILE = True
+    LOG_FILE_PATH = 'logs/app.log'
+    LOG_FILE_MAX_BYTES = 10 * 1024 * 1024  # 10MB
+    LOG_FILE_BACKUP_COUNT = 5
+
 class DevelopmentConfig(Config):
     DEBUG = True
 

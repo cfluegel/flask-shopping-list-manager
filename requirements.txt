@@ -17,5 +17,8 @@ marshmallow-sqlalchemy
 # CORS Support for Mobile Apps
 flask-cors
 
+# Rate Limiting
+flask-limiter
+
 # Testing
 pytest

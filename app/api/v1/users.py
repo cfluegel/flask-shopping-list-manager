@@ -4,13 +4,13 @@ User Management Endpoints for API v1.
 Admin-only endpoints for managing users.
 """
 
-from flask import request
+from flask import request, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
 from sqlalchemy import desc
 
 from . import v1_bp
-from ...extensions import db
+from ...extensions import db, limiter
 from ...models import User, ShoppingList
 from ..schemas import (
     UserSchema,
@@ -97,6 +97,7 @@ def get_user(user_id: int):
 @v1_bp.route('/users', methods=['POST'])
 @jwt_required()
 @admin_required()
+@limiter.limit("20 per hour")
 def create_user():
     """
     Create a new user (Admin only).
@@ -147,6 +148,12 @@ def create_user():
 
     db.session.add(user)
     db.session.commit()
+
+    admin = get_current_user()
+    current_app.logger.info(
+        f'Admin "{admin.username}" (ID: {admin.id}) hat via API Benutzer '
+        f'"{user.username}" (ID: {user.id}) erstellt (Admin: {user.is_admin})'
+    )
 
     # Serialize user data
     user_schema = UserSchema()
@@ -229,6 +236,7 @@ def update_user(user_id: int):
 @v1_bp.route('/users/<int:user_id>', methods=['DELETE'])
 @jwt_required()
 @admin_required()
+@limiter.limit("20 per hour")
 def delete_user(user_id: int):
     """
     Delete a user (Admin only).
@@ -259,8 +267,16 @@ def delete_user(user_id: int):
         )
 
     username = user.username
+    list_count = user.shopping_lists.count()
+    admin = get_current_user()
+
     db.session.delete(user)
     db.session.commit()
+
+    current_app.logger.info(
+        f'Admin "{admin.username}" (ID: {admin.id}) hat via API Benutzer '
+        f'"{username}" (ID: {user_id}) und {list_count} zugehörige Listen gelöscht'
+    )
 
     return success_response(
         message=f'Benutzer "{username}" erfolgreich gelöscht'

@@ -1,5 +1,8 @@
+import os
+import logging
+from logging.handlers import RotatingFileHandler
 from flask import Flask
-from .extensions import db, migrate, login_manager, jwt, cors
+from .extensions import db, migrate, login_manager, jwt, cors, limiter
 from .main import main_bp
 from .api import api_bp
 
@@ -28,6 +31,40 @@ def create_app(config_object='config.Config'):
             "supports_credentials": False
         }
     })
+
+    # Rate Limiter initialisieren
+    limiter.init_app(app)
+
+    # Rate Limiter Error Handler - German error message
+    @app.errorhandler(429)
+    def ratelimit_handler(e):
+        return {
+            "error": "Ratenbegrenzung überschritten",
+            "message": "Sie haben zu viele Anfragen gesendet. Bitte versuchen Sie es später erneut."
+        }, 429
+
+    # Logging konfigurieren
+    if not app.debug and not app.testing:
+        # Erstelle logs Verzeichnis falls nicht vorhanden
+        if not os.path.exists('logs'):
+            os.mkdir('logs')
+
+        # Rotating File Handler für Audit Logs
+        file_handler = RotatingFileHandler(
+            'logs/app.log',
+            maxBytes=10 * 1024 * 1024,  # 10MB
+            backupCount=5
+        )
+        file_handler.setFormatter(logging.Formatter(
+            '%(asctime)s [%(levelname)s] %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        ))
+        file_handler.setLevel(logging.INFO)
+        app.logger.addHandler(file_handler)
+
+    # Set log level
+    app.logger.setLevel(logging.INFO)
+    app.logger.info('Flask Grocery Shopping List Anwendung gestartet')
 
     # JWT Callbacks konfigurieren
     from .models import RevokedToken

@@ -5,12 +5,12 @@ Handles all operations related to shopping list items.
 """
 
 from datetime import datetime, timezone
-from flask import request
+from flask import request, current_app
 from flask_jwt_extended import jwt_required
 from marshmallow import ValidationError
 
 from . import v1_bp
-from ...extensions import db
+from ...extensions import db, limiter
 from ...models import ShoppingList, ShoppingListItem
 from ..schemas import (
     ShoppingListItemSchema,
@@ -73,6 +73,7 @@ def get_items(list_id: int):
 @v1_bp.route('/lists/<int:list_id>/items', methods=['POST'])
 @jwt_required()
 @list_access_required(allow_shared=True)
+@limiter.limit("30 per minute")
 def create_item(list_id: int):
     """
     Add an item to a shopping list.
@@ -128,6 +129,12 @@ def create_item(list_id: int):
     db.session.add(item)
     shopping_list.updated_at = datetime.now(timezone.utc)
     db.session.commit()
+
+    user = get_current_user()
+    current_app.logger.info(
+        f'Benutzer "{user.username}" (ID: {user.id}) hat via API Artikel '
+        f'"{item.name}" (ID: {item.id}) zu Liste {list_id} hinzugefügt'
+    )
 
     item_data = {
         'id': item.id,
@@ -192,6 +199,7 @@ def get_item(item_id: int):
 
 @v1_bp.route('/items/<int:item_id>', methods=['PUT'])
 @jwt_required()
+@limiter.limit("30 per minute")
 def update_item(item_id: int):
     """
     Update a shopping list item.
@@ -273,6 +281,7 @@ def update_item(item_id: int):
 
 @v1_bp.route('/items/<int:item_id>', methods=['DELETE'])
 @jwt_required()
+@limiter.limit("30 per minute")
 def delete_item(item_id: int):
     """
     Delete a shopping list item.
@@ -303,9 +312,16 @@ def delete_item(item_id: int):
         raise ForbiddenError('Zugriff auf diesen Artikel nicht erlaubt')
 
     item_name = item.name
+    user = get_current_user()
+
     db.session.delete(item)
     shopping_list.updated_at = datetime.now(timezone.utc)
     db.session.commit()
+
+    current_app.logger.info(
+        f'Benutzer "{user.username}" (ID: {user.id}) hat via API Artikel '
+        f'"{item_name}" (ID: {item_id}) gelöscht'
+    )
 
     return success_response(
         message=f'Artikel "{item_name}" erfolgreich gelöscht'

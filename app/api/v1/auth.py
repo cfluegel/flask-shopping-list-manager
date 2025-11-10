@@ -5,7 +5,7 @@ Handles user registration, login, token refresh, logout, and password management
 """
 
 from datetime import datetime, timezone
-from flask import request, jsonify
+from flask import request, jsonify, current_app
 from flask_jwt_extended import (
     create_access_token,
     create_refresh_token,
@@ -16,7 +16,7 @@ from flask_jwt_extended import (
 from marshmallow import ValidationError
 
 from . import v1_bp
-from ...extensions import db
+from ...extensions import db, limiter
 from ...models import User, RevokedToken
 from ..schemas import (
     LoginSchema,
@@ -39,6 +39,7 @@ from ..decorators import get_current_user
 # ============================================================================
 
 @v1_bp.route('/auth/register', methods=['POST'])
+@limiter.limit("5 per hour")
 def register():
     """
     Register a new user account.
@@ -72,9 +73,17 @@ def register():
 
     # Check if username or email already exists
     if User.query.filter_by(username=validated_data['username']).first():
+        current_app.logger.warning(
+            f'Registrierungsversuch mit bereits vergebenem Benutzernamen: '
+            f'"{validated_data["username"]}" von IP: {request.remote_addr}'
+        )
         raise ConflictError('Benutzername bereits vergeben')
 
     if User.query.filter_by(email=validated_data['email']).first():
+        current_app.logger.warning(
+            f'Registrierungsversuch mit bereits registrierter E-Mail: '
+            f'"{validated_data["email"]}" von IP: {request.remote_addr}'
+        )
         raise ConflictError('E-Mail-Adresse bereits registriert')
 
     # Create new user
@@ -87,6 +96,10 @@ def register():
 
     db.session.add(user)
     db.session.commit()
+
+    current_app.logger.info(
+        f'Neuer Benutzer registriert: "{user.username}" (ID: {user.id}, E-Mail: {user.email})'
+    )
 
     # Create tokens (convert user.id to string for JWT)
     access_token = create_access_token(identity=str(user.id))
@@ -114,6 +127,7 @@ def register():
 # ============================================================================
 
 @v1_bp.route('/auth/login', methods=['POST'])
+@limiter.limit("5 per minute")
 def login():
     """
     Login with username and password.
@@ -148,11 +162,19 @@ def login():
 
     # Check credentials
     if not user or not user.check_password(validated_data['password']):
+        current_app.logger.warning(
+            f'Fehlgeschlagener API-Anmeldeversuch für Benutzername: '
+            f'"{validated_data["username"]}" von IP: {request.remote_addr}'
+        )
         return error_response(
             status_code=401,
             message='Ungültige Anmeldedaten',
             error_code=ErrorCodes.INVALID_CREDENTIALS
         )
+
+    current_app.logger.info(
+        f'Benutzer "{user.username}" (ID: {user.id}) hat sich via API erfolgreich angemeldet'
+    )
 
     # Create tokens (convert user.id to string for JWT)
     access_token = create_access_token(identity=str(user.id))
@@ -227,12 +249,19 @@ def logout():
     user_id = int(get_jwt_identity())
     expires_at = datetime.fromtimestamp(jwt_data['exp'], tz=timezone.utc)
 
+    user = User.query.get(user_id)
+    username = user.username if user else f"ID:{user_id}"
+
     # Add token to blacklist
     RevokedToken.add_to_blacklist(
         jti=jti,
         token_type=token_type,
         user_id=user_id,
         expires_at=expires_at
+    )
+
+    current_app.logger.info(
+        f'Benutzer "{username}" (ID: {user_id}) hat sich via API abgemeldet'
     )
 
     return success_response(
@@ -356,6 +385,7 @@ def update_current_user():
 
 @v1_bp.route('/auth/change-password', methods=['POST'])
 @jwt_required()
+@limiter.limit("5 per hour")
 def change_password():
     """
     Change current user's password.
@@ -392,6 +422,10 @@ def change_password():
 
     # Verify old password
     if not user.check_password(validated_data['old_password']):
+        current_app.logger.warning(
+            f'Benutzer "{user.username}" (ID: {user.id}) hat ein falsches altes Passwort '
+            f'beim Passwort-Änderungsversuch eingegeben'
+        )
         return error_response(
             status_code=401,
             message='Aktuelles Passwort ist falsch',
@@ -401,6 +435,10 @@ def change_password():
     # Set new password
     user.set_password(validated_data['new_password'])
     db.session.commit()
+
+    current_app.logger.info(
+        f'Benutzer "{user.username}" (ID: {user.id}) hat sein Passwort geändert'
+    )
 
     return success_response(
         message='Passwort erfolgreich geändert'

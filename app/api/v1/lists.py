@@ -11,7 +11,7 @@ from marshmallow import ValidationError
 from sqlalchemy import desc
 
 from . import v1_bp
-from ...extensions import db
+from ...extensions import db, limiter
 from ...models import ShoppingList, ShoppingListItem
 from ..schemas import (
     ShoppingListSchema,
@@ -129,6 +129,7 @@ def get_list(list_id: int):
 
 @v1_bp.route('/lists', methods=['POST'])
 @jwt_required()
+@limiter.limit("30 per minute")
 def create_list():
     """
     Create a new shopping list.
@@ -169,6 +170,11 @@ def create_list():
     db.session.add(shopping_list)
     db.session.commit()
 
+    current_app.logger.info(
+        f'Benutzer "{user.username}" (ID: {user.id}) hat via API Liste '
+        f'"{shopping_list.title}" (ID: {shopping_list.id}) erstellt'
+    )
+
     list_data = {
         'id': shopping_list.id,
         'guid': shopping_list.guid,
@@ -191,6 +197,7 @@ def create_list():
 @v1_bp.route('/lists/<int:list_id>', methods=['PUT'])
 @jwt_required()
 @list_owner_or_admin_required()
+@limiter.limit("30 per minute")
 def update_list(list_id: int):
     """
     Update a shopping list.
@@ -246,6 +253,12 @@ def update_list(list_id: int):
     shopping_list.updated_at = datetime.now(timezone.utc)
     db.session.commit()
 
+    user = get_current_user()
+    current_app.logger.info(
+        f'Benutzer "{user.username}" (ID: {user.id}) hat via API Liste '
+        f'{list_id} aktualisiert'
+    )
+
     list_data = {
         'id': shopping_list.id,
         'guid': shopping_list.guid,
@@ -267,6 +280,7 @@ def update_list(list_id: int):
 @v1_bp.route('/lists/<int:list_id>', methods=['DELETE'])
 @jwt_required()
 @list_owner_or_admin_required()
+@limiter.limit("30 per minute")
 def delete_list(list_id: int):
     """
     Delete a shopping list.
@@ -288,8 +302,16 @@ def delete_list(list_id: int):
         raise NotFoundError('Einkaufsliste nicht gefunden')
 
     title = shopping_list.title
+    user = get_current_user()
+    item_count = shopping_list.items.count()
+
     db.session.delete(shopping_list)
     db.session.commit()
+
+    current_app.logger.info(
+        f'Benutzer "{user.username}" (ID: {user.id}) hat via API Liste '
+        f'"{title}" (ID: {list_id}) mit {item_count} Artikeln gelöscht'
+    )
 
     return success_response(
         message=f'Einkaufsliste "{title}" erfolgreich gelöscht'

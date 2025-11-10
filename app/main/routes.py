@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from flask import (
     abort,
+    current_app,
     flash,
     jsonify,
     redirect,
@@ -20,7 +21,7 @@ from .forms import (
     ShoppingListForm,
     ShoppingListItemForm,
 )
-from ..extensions import db
+from ..extensions import db, limiter
 from ..models import ShoppingList, ShoppingListItem, User
 from ..utils import admin_required, check_list_access
 
@@ -38,6 +39,7 @@ def index():
 
 
 @main_bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute", methods=["POST"])
 def login():
     """User login page."""
     if current_user.is_authenticated:
@@ -48,11 +50,19 @@ def login():
         user = User.query.filter_by(username=form.username.data).first()
         if user and user.check_password(form.password.data):
             login_user(user)
+            current_app.logger.info(
+                f'Benutzer "{user.username}" (ID: {user.id}) hat sich erfolgreich angemeldet'
+            )
             flash('Erfolgreich angemeldet.', 'success')
             next_page = request.args.get('next')
             if not next_page or not next_page.startswith('/'):
                 next_page = url_for('main.dashboard')
             return redirect(next_page)
+
+        # Log failed login attempt
+        current_app.logger.warning(
+            f'Fehlgeschlagener Anmeldeversuch für Benutzername: "{form.username.data}" von IP: {request.remote_addr}'
+        )
         flash('Ungültige Anmeldedaten.', 'danger')
 
     return render_template('login.html', form=form)
@@ -62,7 +72,10 @@ def login():
 @login_required
 def logout():
     """User logout."""
+    username = current_user.username
+    user_id = current_user.id
     logout_user()
+    current_app.logger.info(f'Benutzer "{username}" (ID: {user_id}) hat sich abgemeldet')
     flash('Du wurdest abgemeldet.', 'info')
     return redirect(url_for('main.index'))
 
@@ -110,6 +123,7 @@ def dashboard():
 
 @main_bp.route('/lists/create', methods=['GET', 'POST'])
 @login_required
+@limiter.limit("30 per minute", methods=["POST"])
 def create_list():
     """Create a new shopping list."""
     form = ShoppingListForm()
@@ -123,6 +137,10 @@ def create_list():
         db.session.add(shopping_list)
         db.session.commit()
 
+        current_app.logger.info(
+            f'Benutzer "{current_user.username}" (ID: {current_user.id}) hat Liste '
+            f'"{shopping_list.title}" (ID: {shopping_list.id}) erstellt'
+        )
         flash(f'Liste "{shopping_list.title}" erfolgreich erstellt.', 'success')
         return redirect(url_for('main.view_list', list_id=shopping_list.id))
 
@@ -155,22 +173,43 @@ def view_list(list_id: int):
 
 @main_bp.route('/lists/<int:list_id>/edit', methods=['GET', 'POST'])
 @login_required
+@limiter.limit("30 per minute", methods=["POST"])
 def edit_list(list_id: int):
     """Edit a shopping list."""
     shopping_list = ShoppingList.query.get_or_404(list_id)
 
     # Only owner or admin can edit list settings
     if shopping_list.user_id != current_user.id and not current_user.is_admin:
+        current_app.logger.warning(
+            f'Benutzer "{current_user.username}" (ID: {current_user.id}) hat versucht, '
+            f'Liste {list_id} zu bearbeiten (Zugriff verweigert)'
+        )
         flash('Sie haben keine Berechtigung, diese Liste zu bearbeiten.', 'danger')
         abort(403)
 
     form = ShoppingListForm(obj=shopping_list)
 
     if form.validate_on_submit():
+        old_title = shopping_list.title
+        old_shared = shopping_list.is_shared
+
         shopping_list.title = form.title.data
         shopping_list.is_shared = form.is_shared.data
         shopping_list.updated_at = datetime.now(timezone.utc)
         db.session.commit()
+
+        changes = []
+        if old_title != shopping_list.title:
+            changes.append(f'Titel: "{old_title}" → "{shopping_list.title}"')
+        if old_shared != shopping_list.is_shared:
+            shared_status = "geteilt" if shopping_list.is_shared else "privat"
+            changes.append(f'Freigabe: {shared_status}')
+
+        if changes:
+            current_app.logger.info(
+                f'Benutzer "{current_user.username}" (ID: {current_user.id}) hat Liste '
+                f'{list_id} bearbeitet: {", ".join(changes)}'
+            )
 
         flash(f'Liste "{shopping_list.title}" erfolgreich aktualisiert.', 'success')
         return redirect(url_for('main.view_list', list_id=shopping_list.id))
@@ -180,12 +219,17 @@ def edit_list(list_id: int):
 
 @main_bp.route('/lists/<int:list_id>/delete', methods=['POST'])
 @login_required
+@limiter.limit("30 per minute")
 def delete_list(list_id: int):
     """Delete a shopping list."""
     shopping_list = ShoppingList.query.get_or_404(list_id)
 
     # Only owner or admin can delete
     if shopping_list.user_id != current_user.id and not current_user.is_admin:
+        current_app.logger.warning(
+            f'Benutzer "{current_user.username}" (ID: {current_user.id}) hat versucht, '
+            f'Liste {list_id} zu löschen (Zugriff verweigert)'
+        )
         flash('Sie haben keine Berechtigung, diese Liste zu löschen.', 'danger')
         abort(403)
 
@@ -193,6 +237,10 @@ def delete_list(list_id: int):
     db.session.delete(shopping_list)
     db.session.commit()
 
+    current_app.logger.info(
+        f'Benutzer "{current_user.username}" (ID: {current_user.id}) hat Liste '
+        f'"{title}" (ID: {list_id}) gelöscht'
+    )
     flash(f'Liste "{title}" wurde gelöscht.', 'success')
     return redirect(url_for('main.dashboard'))
 
@@ -203,12 +251,17 @@ def delete_list(list_id: int):
 
 @main_bp.route('/lists/<int:list_id>/items/add', methods=['POST'])
 @login_required
+@limiter.limit("30 per minute")
 def add_item(list_id: int):
     """Add an item to a shopping list."""
     shopping_list = ShoppingList.query.get_or_404(list_id)
 
     # Check access permissions
     if not check_list_access(shopping_list, allow_shared=True):
+        current_app.logger.warning(
+            f'Benutzer "{current_user.username}" (ID: {current_user.id}) hat versucht, '
+            f'Artikel zu Liste {list_id} hinzuzufügen (Zugriff verweigert)'
+        )
         flash('Sie haben keine Berechtigung, Artikel zu dieser Liste hinzuzufügen.', 'danger')
         abort(403)
 
@@ -230,6 +283,10 @@ def add_item(list_id: int):
         shopping_list.updated_at = datetime.now(timezone.utc)
         db.session.commit()
 
+        current_app.logger.info(
+            f'Benutzer "{current_user.username}" (ID: {current_user.id}) hat Artikel '
+            f'"{item.name}" (ID: {item.id}) zu Liste {list_id} hinzugefügt'
+        )
         flash(f'Artikel "{item.name}" hinzugefügt.', 'success')
 
     return redirect(url_for('main.view_list', list_id=list_id))
@@ -237,6 +294,7 @@ def add_item(list_id: int):
 
 @main_bp.route('/items/<int:item_id>/toggle', methods=['POST'])
 @login_required
+@limiter.limit("100 per minute")
 def toggle_item(item_id: int):
     """Toggle the checked status of an item."""
     item = ShoppingListItem.query.get_or_404(item_id)
@@ -246,9 +304,16 @@ def toggle_item(item_id: int):
     if not check_list_access(shopping_list, allow_shared=True):
         abort(403)
 
+    old_status = item.is_checked
     item.is_checked = not item.is_checked
     shopping_list.updated_at = datetime.now(timezone.utc)
     db.session.commit()
+
+    status_text = "abgehakt" if item.is_checked else "nicht abgehakt"
+    current_app.logger.info(
+        f'Benutzer "{current_user.username}" (ID: {current_user.id}) hat Artikel '
+        f'"{item.name}" (ID: {item.id}) als {status_text} markiert'
+    )
 
     return jsonify({
         'success': True,
@@ -258,6 +323,7 @@ def toggle_item(item_id: int):
 
 @main_bp.route('/items/<int:item_id>/delete', methods=['POST'])
 @login_required
+@limiter.limit("30 per minute")
 def delete_item(item_id: int):
     """Delete an item from a shopping list."""
     item = ShoppingListItem.query.get_or_404(item_id)
@@ -273,12 +339,17 @@ def delete_item(item_id: int):
     shopping_list.updated_at = datetime.now(timezone.utc)
     db.session.commit()
 
+    current_app.logger.info(
+        f'Benutzer "{current_user.username}" (ID: {current_user.id}) hat Artikel '
+        f'"{name}" (ID: {item_id}) gelöscht'
+    )
     flash(f'Artikel "{name}" wurde gelöscht.', 'success')
     return redirect(url_for('main.view_list', list_id=list_id))
 
 
 @main_bp.route('/items/<int:item_id>/edit', methods=['POST'])
 @login_required
+@limiter.limit("30 per minute")
 def edit_item(item_id: int):
     """Edit an item in a shopping list (AJAX endpoint)."""
     item = ShoppingListItem.query.get_or_404(item_id)
@@ -291,6 +362,10 @@ def edit_item(item_id: int):
     form = ShoppingListItemForm()
 
     if form.validate_on_submit():
+        # Track changes
+        old_name = item.name
+        old_quantity = item.quantity
+
         # Update item
         item.name = form.name.data.strip()
         item.quantity = form.quantity.data.strip()
@@ -298,6 +373,18 @@ def edit_item(item_id: int):
 
         try:
             db.session.commit()
+
+            changes = []
+            if old_name != item.name:
+                changes.append(f'Name: "{old_name}" → "{item.name}"')
+            if old_quantity != item.quantity:
+                changes.append(f'Menge: "{old_quantity}" → "{item.quantity}"')
+
+            if changes:
+                current_app.logger.info(
+                    f'Benutzer "{current_user.username}" (ID: {current_user.id}) hat Artikel '
+                    f'{item_id} bearbeitet: {", ".join(changes)}'
+                )
 
             return jsonify({
                 'success': True,
@@ -310,6 +397,10 @@ def edit_item(item_id: int):
             })
         except Exception as e:
             db.session.rollback()
+            current_app.logger.error(
+                f'Fehler beim Bearbeiten von Artikel {item_id} durch Benutzer '
+                f'"{current_user.username}" (ID: {current_user.id}): {str(e)}'
+            )
             return jsonify({
                 'success': False,
                 'error': 'Fehler beim Speichern'
@@ -329,6 +420,7 @@ def edit_item(item_id: int):
 @main_bp.route('/admin')
 @login_required
 @admin_required
+@limiter.limit("100 per hour")
 def admin_dashboard():
     """Admin dashboard."""
     total_users = User.query.count()
@@ -358,6 +450,7 @@ def admin_users():
 @main_bp.route('/admin/users/create', methods=['GET', 'POST'])
 @login_required
 @admin_required
+@limiter.limit("20 per hour", methods=["POST"])
 def admin_create_user():
     """Create a new user."""
     form = CreateUserForm()
@@ -372,6 +465,10 @@ def admin_create_user():
         db.session.add(user)
         db.session.commit()
 
+        current_app.logger.info(
+            f'Admin "{current_user.username}" (ID: {current_user.id}) hat Benutzer '
+            f'"{user.username}" (ID: {user.id}) erstellt (Admin: {user.is_admin})'
+        )
         flash(f'Benutzer "{user.username}" wurde erstellt.', 'success')
         return redirect(url_for('main.admin_users'))
 
@@ -381,6 +478,7 @@ def admin_create_user():
 @main_bp.route('/admin/users/<int:user_id>/edit', methods=['GET', 'POST'])
 @login_required
 @admin_required
+@limiter.limit("20 per hour", methods=["POST"])
 def admin_edit_user(user_id: int):
     """Edit an existing user."""
     user = User.query.get_or_404(user_id)
@@ -388,15 +486,37 @@ def admin_edit_user(user_id: int):
     form.user_id.data = str(user.id)
 
     if form.validate_on_submit():
+        old_username = user.username
+        old_email = user.email
+        old_is_admin = user.is_admin
+
         user.username = form.username.data
         user.email = form.email.data
         user.is_admin = form.is_admin.data
 
+        changes = []
+        if old_username != user.username:
+            changes.append(f'Benutzername: "{old_username}" → "{user.username}"')
+        if old_email != user.email:
+            changes.append(f'E-Mail: "{old_email}" → "{user.email}"')
+        if old_is_admin != user.is_admin:
+            admin_status = "Admin" if user.is_admin else "Normaler Benutzer"
+            changes.append(f'Rolle: {admin_status}')
+
         # Only update password if provided
+        password_changed = False
         if form.password.data:
             user.set_password(form.password.data)
+            password_changed = True
+            changes.append('Passwort geändert')
 
         db.session.commit()
+
+        if changes:
+            current_app.logger.info(
+                f'Admin "{current_user.username}" (ID: {current_user.id}) hat Benutzer '
+                f'"{user.username}" (ID: {user_id}) bearbeitet: {", ".join(changes)}'
+            )
 
         flash(f'Benutzer "{user.username}" wurde aktualisiert.', 'success')
         return redirect(url_for('main.admin_users'))
@@ -407,19 +527,29 @@ def admin_edit_user(user_id: int):
 @main_bp.route('/admin/users/<int:user_id>/delete', methods=['POST'])
 @login_required
 @admin_required
+@limiter.limit("20 per hour")
 def admin_delete_user(user_id: int):
     """Delete a user and all their lists."""
     user = User.query.get_or_404(user_id)
 
     # Prevent deleting yourself
     if user.id == current_user.id:
+        current_app.logger.warning(
+            f'Admin "{current_user.username}" (ID: {current_user.id}) hat versucht, '
+            f'sich selbst zu löschen'
+        )
         flash('Sie können sich nicht selbst löschen.', 'danger')
         return redirect(url_for('main.admin_users'))
 
     username = user.username
+    list_count = user.shopping_lists.count()
     db.session.delete(user)
     db.session.commit()
 
+    current_app.logger.info(
+        f'Admin "{current_user.username}" (ID: {current_user.id}) hat Benutzer '
+        f'"{username}" (ID: {user_id}) und {list_count} zugehörige Listen gelöscht'
+    )
     flash(f'Benutzer "{username}" und alle zugehörigen Listen wurden gelöscht.', 'success')
     return redirect(url_for('main.admin_users'))
 
@@ -436,14 +566,23 @@ def admin_lists():
 @main_bp.route('/admin/lists/<int:list_id>/delete', methods=['POST'])
 @login_required
 @admin_required
+@limiter.limit("20 per hour")
 def admin_delete_list(list_id: int):
     """Delete a shopping list (admin)."""
     shopping_list = ShoppingList.query.get_or_404(list_id)
 
     title = shopping_list.title
     owner = shopping_list.owner.username
+    owner_id = shopping_list.user_id
+    item_count = shopping_list.items.count()
+
     db.session.delete(shopping_list)
     db.session.commit()
 
+    current_app.logger.info(
+        f'Admin "{current_user.username}" (ID: {current_user.id}) hat Liste '
+        f'"{title}" (ID: {list_id}) von Benutzer "{owner}" (ID: {owner_id}) '
+        f'mit {item_count} Artikeln gelöscht'
+    )
     flash(f'Liste "{title}" von Benutzer "{owner}" wurde gelöscht.', 'success')
     return redirect(url_for('main.admin_lists'))
