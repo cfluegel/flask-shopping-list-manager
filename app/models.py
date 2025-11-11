@@ -45,6 +45,7 @@ class ShoppingList(db.Model):
     title = db.Column(db.String(200), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     is_shared = db.Column(db.Boolean, default=False, nullable=False)
+    version = db.Column(db.Integer, default=1, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True, default=None, index=True)
@@ -93,6 +94,31 @@ class ShoppingList(db.Model):
         """Query for deleted lists (trash)."""
         return cls.query.filter(cls.deleted_at.isnot(None))
 
+    def check_version(self, expected_version: int) -> None:
+        """
+        Check if the expected version matches the current version.
+
+        Args:
+            expected_version: The version the client expects
+
+        Raises:
+            ConflictError: If versions don't match (optimistic locking conflict)
+        """
+        from .api.errors import ConflictError
+
+        if expected_version is not None and self.version != expected_version:
+            raise ConflictError(
+                'Die Ressource wurde zwischenzeitlich geändert. Bitte aktualisieren Sie und versuchen es erneut.',
+                details={
+                    'current_version': self.version,
+                    'expected_version': expected_version
+                }
+            )
+
+    def increment_version(self) -> None:
+        """Increment the version number for optimistic locking."""
+        self.version += 1
+
 
 class ShoppingListItem(db.Model):
     """Shopping list item model."""
@@ -105,6 +131,7 @@ class ShoppingListItem(db.Model):
     quantity = db.Column(db.String(50), nullable=False, default='1')
     is_checked = db.Column(db.Boolean, default=False, nullable=False)
     order_index = db.Column(db.Integer, nullable=False, default=0)
+    version = db.Column(db.Integer, default=1, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True, default=None, index=True)
 
@@ -133,6 +160,31 @@ class ShoppingListItem(db.Model):
     def deleted(cls):
         """Query for deleted items (trash)."""
         return cls.query.filter(cls.deleted_at.isnot(None))
+
+    def check_version(self, expected_version: int) -> None:
+        """
+        Check if the expected version matches the current version.
+
+        Args:
+            expected_version: The version the client expects
+
+        Raises:
+            ConflictError: If versions don't match (optimistic locking conflict)
+        """
+        from .api.errors import ConflictError
+
+        if expected_version is not None and self.version != expected_version:
+            raise ConflictError(
+                'Die Ressource wurde zwischenzeitlich geändert. Bitte aktualisieren Sie und versuchen es erneut.',
+                details={
+                    'current_version': self.version,
+                    'expected_version': expected_version
+                }
+            )
+
+    def increment_version(self) -> None:
+        """Increment the version number for optimistic locking."""
+        self.version += 1
 
 class RevokedToken(db.Model):
     """Revoked JWT tokens (Blacklist) for logout and token invalidation."""

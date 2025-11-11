@@ -108,6 +108,7 @@ class ShoppingListItemSchema(Schema):
     quantity = fields.Str(load_default='1', validate=validate.Length(max=50))
     is_checked = fields.Bool(load_default=False)
     order_index = fields.Int(dump_only=True)
+    version = fields.Int(dump_only=True)
     created_at = fields.DateTime(dump_only=True)
 
 
@@ -122,6 +123,7 @@ class ShoppingListItemUpdateSchema(Schema):
     name = fields.Str(validate=validate.Length(min=1, max=200))
     quantity = fields.Str(validate=validate.Length(max=50))
     is_checked = fields.Bool()
+    version = fields.Int(required=False, validate=validate.Range(min=1))
 
 
 class ShoppingListItemReorderSchema(Schema):
@@ -137,6 +139,7 @@ class ShoppingListSchema(Schema):
     is_shared = fields.Bool(load_default=False)
     owner_id = fields.Int(dump_only=True)
     owner_username = fields.Str(dump_only=True)
+    version = fields.Int(dump_only=True)
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
     item_count = fields.Int(dump_only=True)
@@ -150,6 +153,7 @@ class ShoppingListDetailSchema(Schema):
     is_shared = fields.Bool()
     owner_id = fields.Int(dump_only=True)
     owner_username = fields.Str(dump_only=True)
+    version = fields.Int(dump_only=True)
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
     items = fields.List(fields.Nested(ShoppingListItemSchema))
@@ -165,6 +169,7 @@ class ShoppingListUpdateSchema(Schema):
     """Schema for updating a shopping list."""
     title = fields.Str(validate=validate.Length(min=1, max=200))
     is_shared = fields.Bool()
+    version = fields.Int(required=False, validate=validate.Range(min=1))
 
 
 class ShareListSchema(Schema):

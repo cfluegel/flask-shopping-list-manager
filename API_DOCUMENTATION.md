@@ -258,6 +258,130 @@ Wenn das Ratenlimit überschritten wird, gibt die API zurück:
 
 ---
 
+## Optimistic Locking (Versionskontrolle)
+
+Die API verwendet **Optimistic Locking** um Race Conditions bei gleichzeitigen Updates zu verhindern. Dies schützt vor dem "Lost Update Problem", wenn mehrere Clients dieselbe Ressource gleichzeitig bearbeiten.
+
+### Wie funktioniert es?
+
+Jede `ShoppingList` und jedes `ShoppingListItem` hat ein `version` Feld:
+
+```json
+{
+  "id": 1,
+  "title": "Wocheneinkauf",
+  "version": 3,
+  ...
+}
+```
+
+Die Version wird bei jedem Update automatisch inkrementiert.
+
+### Verwendung
+
+**Optional:** Sie können die `version` bei Updates mitschicken, um zu garantieren, dass die Ressource zwischenzeitlich nicht geändert wurde:
+
+```json
+PUT /api/v1/lists/1
+{
+  "title": "Neuer Titel",
+  "version": 3
+}
+```
+
+**Erfolg (200):** Update wird durchgeführt, Version wird inkrementiert:
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "title": "Neuer Titel",
+    "version": 4,
+    ...
+  }
+}
+```
+
+**Konflikt (409):** Jemand anderes hat die Ressource zwischenzeitlich geändert:
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Die Ressource wurde zwischenzeitlich geändert. Bitte aktualisieren Sie und versuchen es erneut.",
+    "code": "CONFLICT",
+    "details": {
+      "current_version": 5,
+      "expected_version": 3
+    }
+  }
+}
+```
+
+### Retry-Strategie
+
+Bei einem 409 Konflikt:
+
+1. Holen Sie die aktuelle Version der Ressource (GET Request)
+2. Mergen Sie Ihre Änderungen mit den aktuellen Daten
+3. Senden Sie das Update mit der neuen Version erneut
+
+**Beispiel-Implementierung (JavaScript):**
+```javascript
+async function updateListWithRetry(listId, updates, maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      // Aktuelle Daten abrufen
+      const current = await fetch(`/api/v1/lists/${listId}`).then(r => r.json());
+
+      // Update mit aktueller Version senden
+      const response = await fetch(`/api/v1/lists/${listId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...updates,
+          version: current.data.version
+        })
+      });
+
+      if (response.status === 409) {
+        // Konflikt - erneut versuchen
+        console.log('Konflikt erkannt, versuche erneut...');
+        continue;
+      }
+
+      if (response.ok) {
+        return await response.json();
+      }
+
+      throw new Error(`Update fehlgeschlagen: ${response.status}`);
+    } catch (error) {
+      if (attempt === maxRetries - 1) throw error;
+    }
+  }
+
+  throw new Error('Max Retries erreicht');
+}
+```
+
+### Backwards Compatibility
+
+**Wichtig:** Das `version` Feld ist **optional** bei Updates. Wenn Sie es weglassen, wird das Update ohne Version-Check durchgeführt (wie bisher). Dies gewährleistet Kompatibilität mit bestehenden Clients.
+
+```json
+PUT /api/v1/lists/1
+{
+  "title": "Neuer Titel"
+}
+```
+→ Wird immer erfolgreich sein (solange andere Validierungen passen)
+
+### Betroffene Endpoints
+
+- `PUT /lists/{list_id}` - Shopping List Updates
+- `PUT /items/{item_id}` - Shopping Item Updates
+
+---
+
 ## Endpoints
 
 ---
@@ -863,6 +987,8 @@ Einkaufsliste aktualisieren.
 
 **Zugriff:** Nur Besitzer oder Admin.
 
+**Hinweis:** Unterstützt Optimistic Locking (siehe [Versionskontrolle](#optimistic-locking-versionskontrolle))
+
 **Headers:**
 ```
 Authorization: Bearer <access_token>
@@ -872,9 +998,15 @@ Authorization: Bearer <access_token>
 ```json
 {
   "title": "Aktualisierter Titel (optional)",
-  "is_shared": true
+  "is_shared": true,
+  "version": 3
 }
 ```
+
+**Felder:**
+- `title` (string, optional): Neuer Titel der Liste
+- `is_shared` (boolean, optional): Sharing-Status ändern
+- `version` (integer, optional): Aktuelle Version für Optimistic Locking
 
 **Response: 200 OK**
 ```json
@@ -1116,6 +1248,8 @@ Item aktualisieren.
 
 **Zugriff:** Besitzer, Admin oder wenn Liste geteilt.
 
+**Hinweis:** Unterstützt Optimistic Locking (siehe [Versionskontrolle](#optimistic-locking-versionskontrolle))
+
 **Headers:**
 ```
 Authorization: Bearer <access_token>
@@ -1126,9 +1260,16 @@ Authorization: Bearer <access_token>
 {
   "name": "Vollmilch (optional)",
   "quantity": "3L (optional)",
-  "is_checked": true
+  "is_checked": true,
+  "version": 2
 }
 ```
+
+**Felder:**
+- `name` (string, optional): Neuer Name des Artikels
+- `quantity` (string, optional): Neue Menge
+- `is_checked` (boolean, optional): Checkbox-Status
+- `version` (integer, optional): Aktuelle Version für Optimistic Locking
 
 **Response: 200 OK**
 ```json

@@ -62,6 +62,7 @@ def get_items(list_id: int):
             'quantity': item.quantity,
             'is_checked': item.is_checked,
             'order_index': item.order_index,
+            'version': item.version,
             'created_at': item.created_at.isoformat()
         }
         for item in items
@@ -143,6 +144,7 @@ def create_item(list_id: int):
         'quantity': item.quantity,
         'is_checked': item.is_checked,
         'order_index': item.order_index,
+        'version': item.version,
         'created_at': item.created_at.isoformat()
     }
 
@@ -190,6 +192,7 @@ def get_item(item_id: int):
         'quantity': item.quantity,
         'is_checked': item.is_checked,
         'order_index': item.order_index,
+        'version': item.version,
         'created_at': item.created_at.isoformat(),
         'list_id': shopping_list.id,
         'list_title': shopping_list.title
@@ -252,6 +255,10 @@ def update_item(item_id: int):
             details=err.messages
         )
 
+    # Check version for optimistic locking (if provided)
+    if 'version' in validated_data:
+        item.check_version(validated_data['version'])
+
     # Update fields
     if 'name' in validated_data:
         item.name = validated_data['name']
@@ -262,8 +269,16 @@ def update_item(item_id: int):
     if 'is_checked' in validated_data:
         item.is_checked = validated_data['is_checked']
 
+    # Increment version after successful update
+    item.increment_version()
     shopping_list.updated_at = datetime.now(timezone.utc)
     db.session.commit()
+
+    user = get_current_user()
+    current_app.logger.info(
+        f'Benutzer "{user.username}" (ID: {user.id}) hat via API Artikel '
+        f'{item_id} aktualisiert (Version: {item.version})'
+    )
 
     item_data = {
         'id': item.id,
@@ -271,6 +286,7 @@ def update_item(item_id: int):
         'quantity': item.quantity,
         'is_checked': item.is_checked,
         'order_index': item.order_index,
+        'version': item.version,
         'created_at': item.created_at.isoformat()
     }
 
@@ -519,6 +535,7 @@ def get_trash_items():
             'quantity': item.quantity,
             'is_checked': item.is_checked,
             'order_index': item.order_index,
+            'version': item.version,
             'created_at': item.created_at.isoformat(),
             'deleted_at': item.deleted_at.isoformat(),
             'list_id': item.shopping_list.id,

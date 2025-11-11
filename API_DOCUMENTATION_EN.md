@@ -302,6 +302,158 @@ When rate limit is exceeded, the API returns:
 ```
 **Status Code**: 429 Too Many Requests
 
+## Optimistic Locking (Version Control)
+
+The API uses **Optimistic Locking** to prevent race conditions during concurrent updates. This protects against the "Lost Update Problem" when multiple clients edit the same resource simultaneously.
+
+### How It Works
+
+Each `ShoppingList` and `ShoppingListItem` has a `version` field:
+
+```json
+{
+  "id": 1,
+  "title": "Weekly Groceries",
+  "version": 3,
+  ...
+}
+```
+
+The version is automatically incremented with each update.
+
+### Usage
+
+**Optional:** You can include the `version` in updates to ensure the resource hasn't been modified in the meantime:
+
+```json
+PUT /api/v1/lists/1
+{
+  "title": "New Title",
+  "version": 3
+}
+```
+
+**Success (200):** Update is performed, version is incremented:
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "title": "New Title",
+    "version": 4,
+    ...
+  }
+}
+```
+
+**Conflict (409):** Someone else modified the resource in the meantime:
+```json
+{
+  "success": false,
+  "error": {
+    "message": "The resource was modified in the meantime. Please refresh and try again.",
+    "code": "CONFLICT",
+    "details": {
+      "current_version": 5,
+      "expected_version": 3
+    }
+  }
+}
+```
+
+### Retry Strategy
+
+When you receive a 409 Conflict:
+
+1. Fetch the current version of the resource (GET request)
+2. Merge your changes with the current data
+3. Resend the update with the new version
+
+**Example Implementation (JavaScript):**
+```javascript
+async function updateListWithRetry(listId, updates, maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      // Fetch current data
+      const current = await fetch(`/api/v1/lists/${listId}`).then(r => r.json());
+
+      // Send update with current version
+      const response = await fetch(`/api/v1/lists/${listId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...updates,
+          version: current.data.version
+        })
+      });
+
+      if (response.status === 409) {
+        // Conflict - retry
+        console.log('Conflict detected, retrying...');
+        continue;
+      }
+
+      if (response.ok) {
+        return await response.json();
+      }
+
+      throw new Error(`Update failed: ${response.status}`);
+    } catch (error) {
+      if (attempt === maxRetries - 1) throw error;
+    }
+  }
+
+  throw new Error('Max retries reached');
+}
+```
+
+**Example Implementation (Python):**
+```python
+import requests
+
+def update_list_with_retry(list_id, updates, max_retries=3):
+    for attempt in range(max_retries):
+        # Fetch current data
+        response = requests.get(f'/api/v1/lists/{list_id}')
+        current = response.json()
+
+        # Send update with current version
+        updates['version'] = current['data']['version']
+        response = requests.put(
+            f'/api/v1/lists/{list_id}',
+            json=updates
+        )
+
+        if response.status_code == 409:
+            # Conflict - retry
+            print('Conflict detected, retrying...')
+            continue
+
+        if response.ok:
+            return response.json()
+
+        raise Exception(f'Update failed: {response.status_code}')
+
+    raise Exception('Max retries reached')
+```
+
+### Backwards Compatibility
+
+**Important:** The `version` field is **optional** in updates. If you omit it, the update will be performed without version checking (as before). This ensures compatibility with existing clients.
+
+```json
+PUT /api/v1/lists/1
+{
+  "title": "New Title"
+}
+```
+→ Will always succeed (as long as other validations pass)
+
+### Affected Endpoints
+
+- `PUT /lists/{list_id}` - Shopping List Updates
+- `PUT /items/{item_id}` - Shopping Item Updates
+
 ## Error Handling
 
 All error responses follow a consistent format:

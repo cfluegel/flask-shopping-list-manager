@@ -71,6 +71,7 @@ def get_lists():
             'is_shared': shopping_list.is_shared,
             'owner_id': shopping_list.user_id,
             'owner_username': shopping_list.owner.username,
+            'version': shopping_list.version,
             'created_at': shopping_list.created_at.isoformat(),
             'updated_at': shopping_list.updated_at.isoformat(),
             'item_count': item_count
@@ -110,6 +111,7 @@ def get_list(list_id: int):
         'is_shared': shopping_list.is_shared,
         'owner_id': shopping_list.user_id,
         'owner_username': shopping_list.owner.username,
+        'version': shopping_list.version,
         'created_at': shopping_list.created_at.isoformat(),
         'updated_at': shopping_list.updated_at.isoformat(),
         'items': [
@@ -119,6 +121,7 @@ def get_list(list_id: int):
                 'quantity': item.quantity,
                 'is_checked': item.is_checked,
                 'order_index': item.order_index,
+                'version': item.version,
                 'created_at': item.created_at.isoformat()
             }
             for item in items
@@ -183,6 +186,7 @@ def create_list():
         'is_shared': shopping_list.is_shared,
         'owner_id': shopping_list.user_id,
         'owner_username': shopping_list.owner.username,
+        'version': shopping_list.version,
         'created_at': shopping_list.created_at.isoformat(),
         'updated_at': shopping_list.updated_at.isoformat(),
         'item_count': 0
@@ -238,6 +242,10 @@ def update_list(list_id: int):
             details=err.messages
         )
 
+    # Check version for optimistic locking (if provided)
+    if 'version' in validated_data:
+        shopping_list.check_version(validated_data['version'])
+
     # Update fields
     if 'title' in validated_data:
         shopping_list.title = validated_data['title']
@@ -251,13 +259,15 @@ def update_list(list_id: int):
 
         shopping_list.is_shared = validated_data['is_shared']
 
+    # Increment version after successful update
+    shopping_list.increment_version()
     shopping_list.updated_at = datetime.now(timezone.utc)
     db.session.commit()
 
     user = get_current_user()
     current_app.logger.info(
         f'Benutzer "{user.username}" (ID: {user.id}) hat via API Liste '
-        f'{list_id} aktualisiert'
+        f'{list_id} aktualisiert (Version: {shopping_list.version})'
     )
 
     item_count = ShoppingListItem.active().filter_by(shopping_list_id=shopping_list.id).count()
@@ -268,6 +278,7 @@ def update_list(list_id: int):
         'is_shared': shopping_list.is_shared,
         'owner_id': shopping_list.user_id,
         'owner_username': shopping_list.owner.username,
+        'version': shopping_list.version,
         'created_at': shopping_list.created_at.isoformat(),
         'updated_at': shopping_list.updated_at.isoformat(),
         'item_count': item_count
@@ -465,6 +476,7 @@ def get_trash_lists():
             'is_shared': shopping_list.is_shared,
             'owner_id': shopping_list.user_id,
             'owner_username': shopping_list.owner.username,
+            'version': shopping_list.version,
             'created_at': shopping_list.created_at.isoformat(),
             'updated_at': shopping_list.updated_at.isoformat(),
             'deleted_at': shopping_list.deleted_at.isoformat(),
