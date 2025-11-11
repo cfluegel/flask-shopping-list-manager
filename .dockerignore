@@ -7,11 +7,13 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+*.egg
 
 # Virtual Environment
 venv/
 env/
 ENV/
+.venv
 
 # IDE
 .vscode/
@@ -19,6 +21,13 @@ ENV/
 *.swp
 *.swo
 *~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.coverage.*
 
 # Database
 *.db
@@ -26,35 +35,39 @@ ENV/
 *.sqlite3
 instance/
 
-# Flask
-.env
-.flaskenv
-instance/
+# Logs
+logs/
+*.log
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
+# Environment Variables
+.env
+.env.local
+.env.*.local
 
 # Git
 .git/
 .gitignore
-
-# Docker
-Dockerfile
-.dockerignore
-docker-compose.yml
+.gitattributes
 
 # Documentation
 *.md
-!README.md
+docs/
 
-# Migrations (optional - comment out if you want to include migrations)
-# migrations/
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
 
-# OS
-.DS_Store
-Thumbs.db
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
 
-# Logs
-*.log
+# Development Scripts
+start-development.sh
+*.local.sh
+
+# Temporary Files
+*.tmp
+*.temp
+.cache/

@@ -1,4 +1,5 @@
 # Multi-stage Dockerfile for Flask Grocery Shopping List
+# Optimized for production deployment
 
 # Stage 1: Builder
 FROM python:3.13-slim AS builder
@@ -6,32 +7,45 @@ FROM python:3.13-slim AS builder
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies for building
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     gcc \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir --user -r requirements.txt
 
 # Stage 2: Runtime
 FROM python:3.13-slim
+
+# Install runtime dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     FLASK_CONFIG=config.ProductionConfig \
-    FLASK_DEBUG=0
+    FLASK_DEBUG=0 \
+    PORT=8000
 
-# Create non-root user
-RUN useradd -m -u 1000 -s /bin/bash appuser && \
-    mkdir -p /app/instance && \
-    chown -R appuser:appuser /app
+# Create non-root user with specific UID/GID
+RUN groupadd -r -g 1000 appuser && \
+    useradd -r -m -u 1000 -g appuser -s /bin/bash appuser
 
 # Set working directory
 WORKDIR /app
+
+# Create necessary directories with proper permissions
+RUN mkdir -p /app/instance /app/logs /app/migrations && \
+    chown -R appuser:appuser /app
 
 # Copy Python dependencies from builder
 COPY --from=builder /root/.local /home/appuser/.local
@@ -39,21 +53,18 @@ COPY --from=builder /root/.local /home/appuser/.local
 # Copy application code
 COPY --chown=appuser:appuser . .
 
-# Switch to non-root user
-USER appuser
-
 # Add local bin to PATH
 ENV PATH=/home/appuser/.local/bin:$PATH
 
-# Create instance directory for SQLite database
-RUN mkdir -p /app/instance
+# Switch to non-root user
+USER appuser
 
-# Expose port
-EXPOSE 5000
+# Expose port (configurable via environment)
+EXPOSE ${PORT}
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:5000/api/status', timeout=5)"
+# Health check with proper URL
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/api/status || exit 1
 
-# Run database initialization and start Gunicorn
-CMD ["sh", "-c", "flask db upgrade && flask init-db && gunicorn --bind 0.0.0.0:5000 --workers 4 --threads 2 --timeout 60 --access-logfile - --error-logfile - 'app:create_app()'"]
+# Run database initialization and start Gunicorn with production settings
+CMD ["sh", "-c", "flask db upgrade && flask init-db && gunicorn --bind 0.0.0.0:${PORT} --workers ${GUNICORN_WORKERS:-4} --threads ${GUNICORN_THREADS:-2} --timeout ${GUNICORN_TIMEOUT:-60} --worker-class sync --worker-tmp-dir /dev/shm --access-logfile /app/logs/access.log --error-logfile /app/logs/error.log --log-level info --capture-output 'app:create_app(\"config.ProductionConfig\")'"]
