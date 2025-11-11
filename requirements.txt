@@ -20,5 +20,8 @@ flask-cors
 # Rate Limiting
 flask-limiter
 
+# API Documentation
+flask-restx
+
 # Testing
 pytest

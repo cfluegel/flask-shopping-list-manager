@@ -288,6 +288,14 @@ def register_error_handlers(app):
     @app.errorhandler(404)
     def handle_404_error(error):
         """Handle 404 Not Found errors."""
+        # Let Flask-RESTX handle its own routes (docs, swagger, etc.)
+        from flask import request
+        if (request.path.startswith('/api/v1/docs') or
+            request.path.startswith('/api/v1/swagger') or
+            request.path.startswith('/swaggerui')):
+            # Don't intercept - Flask-RESTX will render its UI
+            return ('', 404)  # Return empty response, Flask-RESTX will override
+
         return error_response(
             status_code=404,
             message='Ressource nicht gefunden',

@@ -79,9 +79,14 @@ def create_app(config_object='config.Config'):
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
 
-    # Error Handlers registrieren
+    # Error Handlers registrieren (before docs blueprint to avoid conflicts)
     from .api.errors import register_error_handlers
     register_error_handlers(app)
+
+    # API Documentation Blueprint registrieren (AFTER error handlers)
+    # This ensures Flask-RESTX handles its own 404s
+    from .api.docs import docs_bp
+    app.register_blueprint(docs_bp, url_prefix='/api/v1')
 
     # CLI-Kommandos registrieren
     from .cli import register_commands

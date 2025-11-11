@@ -153,13 +153,108 @@ Content-Type: application/json
 
 ---
 
-## Rate Limiting
+## Rate Limiting (Ratenbegrenzung)
 
-Derzeit nicht implementiert. Kann bei Bedarf hinzugefügt werden.
+Die API implementiert Ratenbegrenzung zum Schutz vor Missbrauch:
 
-**Empfehlung für Production:**
-- 100 Requests pro Minute pro IP
-- 1000 Requests pro Stunde pro Benutzer
+| Endpoint-Kategorie | Ratenlimit |
+|-------------------|------------|
+| Registrierung | 5 Anfragen pro Stunde |
+| Login | 5 Anfragen pro Minute |
+| Passwort-Änderungen | 5 Anfragen pro Stunde |
+| Allgemeine Operationen | 30 Anfragen pro Minute |
+| Admin-Operationen | 20 Anfragen pro Stunde |
+
+### Rate Limit Response Headers
+
+Jede API-Antwort enthält Ratenbegrenzungs-Informationen in den Headers:
+
+| Header | Beschreibung | Beispiel |
+|--------|--------------|----------|
+| `X-RateLimit-Limit` | Maximale Anzahl erlaubter Anfragen im Zeitfenster | `5` |
+| `X-RateLimit-Remaining` | Verbleibende Anfragen im aktuellen Zeitfenster | `4` |
+| `X-RateLimit-Reset` | Unix-Timestamp, wann das Ratenlimit zurückgesetzt wird | `1762844996` |
+| `Retry-After` | Anzahl Sekunden, die gewartet werden soll vor erneutem Versuch | `60` |
+
+**Beispiel Response Headers:**
+```
+X-RateLimit-Limit: 5
+X-RateLimit-Remaining: 4
+X-RateLimit-Reset: 1762844996
+Retry-After: 60
+```
+
+### Umgang mit Ratenlimits
+
+**Best Practices:**
+1. **Headers überwachen**: Prüfe `X-RateLimit-Remaining` vor Anfragen
+2. **Limits respektieren**: Stoppe Anfragen wenn `X-RateLimit-Remaining` 0 erreicht
+3. **Angemessen warten**: Verwende `Retry-After` Header-Wert für Wartezeit
+4. **Backoff implementieren**: Nutze exponentielles Backoff für Wiederholungen
+5. **Responses cachen**: Cache GET-Antworten um API-Aufrufe zu reduzieren
+
+**Beispiel-Implementierung (JavaScript):**
+```javascript
+async function apiAnfrage(url, optionen) {
+  const response = await fetch(url, optionen);
+
+  // Rate Limit Headers prüfen
+  const verbleibend = parseInt(response.headers.get('X-RateLimit-Remaining'));
+  const reset = parseInt(response.headers.get('X-RateLimit-Reset'));
+
+  if (response.status === 429) {
+    const retryAfter = parseInt(response.headers.get('Retry-After'));
+    console.log(`Ratenlimit überschritten. Erneuter Versuch in ${retryAfter} Sekunden.`);
+
+    // Warten und wiederholen
+    await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+    return apiAnfrage(url, optionen);
+  }
+
+  // Warnung bei Annäherung an Limit
+  if (verbleibend < 2) {
+    console.warn(`Ratenlimit wird erreicht. ${verbleibend} Anfragen verbleibend.`);
+  }
+
+  return response;
+}
+```
+
+**Beispiel-Implementierung (Python):**
+```python
+import time
+import requests
+
+def api_anfrage(url, headers=None):
+    response = requests.get(url, headers=headers)
+
+    # Rate Limit Headers prüfen
+    verbleibend = int(response.headers.get('X-RateLimit-Remaining', 0))
+    reset = int(response.headers.get('X-RateLimit-Reset', 0))
+
+    if response.status_code == 429:
+        retry_after = int(response.headers.get('Retry-After', 60))
+        print(f"Ratenlimit überschritten. Warte {retry_after} Sekunden...")
+        time.sleep(retry_after)
+        return api_anfrage(url, headers)
+
+    # Warnung bei Annäherung an Limit
+    if verbleibend < 2:
+        print(f"Warnung: Nur noch {verbleibend} Anfragen verbleibend")
+
+    return response
+```
+
+### Rate Limit Fehler-Antwort
+
+Wenn das Ratenlimit überschritten wird, gibt die API zurück:
+```json
+{
+  "error": "Ratenbegrenzung überschritten",
+  "message": "Sie haben zu viele Anfragen gesendet. Bitte versuchen Sie es später erneut."
+}
+```
+**Status Code**: 429 Too Many Requests
 
 ---
 
