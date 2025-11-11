@@ -43,7 +43,7 @@ class ShoppingList(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     guid = db.Column(db.String(36), unique=True, nullable=False, index=True, default=lambda: str(uuid.uuid4()))
     title = db.Column(db.String(200), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     is_shared = db.Column(db.Boolean, default=False, nullable=False)
     version = db.Column(db.Integer, default=1, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
@@ -126,7 +126,7 @@ class ShoppingListItem(db.Model):
     __tablename__ = 'shopping_list_items'
 
     id = db.Column(db.Integer, primary_key=True)
-    shopping_list_id = db.Column(db.Integer, db.ForeignKey('shopping_lists.id'), nullable=False)
+    shopping_list_id = db.Column(db.Integer, db.ForeignKey('shopping_lists.id'), nullable=False, index=True)
     name = db.Column(db.String(200), nullable=False)
     quantity = db.Column(db.String(50), nullable=False, default='1')
     is_checked = db.Column(db.Boolean, default=False, nullable=False)
@@ -194,7 +194,7 @@ class RevokedToken(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     jti = db.Column(db.String(120), unique=True, nullable=False, index=True)
     token_type = db.Column(db.String(20), nullable=False)  # 'access' or 'refresh'
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     revoked_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     expires_at = db.Column(db.DateTime, nullable=False)
 

@@ -25,3 +25,5 @@ flask-restx
 
 # Testing
 pytest
+pytest-cov
+pytest-flask

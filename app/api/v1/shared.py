@@ -34,7 +34,8 @@ def get_shared_list(guid: str):
         200: Shopping list with items
         404: List not found or not shared
     """
-    shopping_list = ShoppingList.query.filter_by(guid=guid).first()
+    # Bug Fix #2: Filter out soft-deleted lists using active() query
+    shopping_list = ShoppingList.active().filter_by(guid=guid).first()
 
     if not shopping_list:
         raise NotFoundError('Einkaufsliste nicht gefunden')
@@ -47,7 +48,10 @@ def get_shared_list(guid: str):
             error_code=ErrorCodes.LIST_NOT_SHARED
         )
 
-    items = shopping_list.items.order_by(ShoppingListItem.order_index.desc()).all()
+    # Bug Fix #1: Filter out soft-deleted items using active() query
+    items = ShoppingListItem.active().filter_by(
+        shopping_list_id=shopping_list.id
+    ).order_by(ShoppingListItem.order_index.desc()).all()
 
     list_data = {
         'id': shopping_list.id,
@@ -84,7 +88,8 @@ def get_shared_list_items(guid: str):
         200: List of items
         404: List not found or not shared
     """
-    shopping_list = ShoppingList.query.filter_by(guid=guid).first()
+    # Filter out soft-deleted lists using active() query
+    shopping_list = ShoppingList.active().filter_by(guid=guid).first()
 
     if not shopping_list:
         raise NotFoundError('Einkaufsliste nicht gefunden')
@@ -97,7 +102,10 @@ def get_shared_list_items(guid: str):
             error_code=ErrorCodes.LIST_NOT_SHARED
         )
 
-    items = shopping_list.items.order_by(ShoppingListItem.order_index.desc()).all()
+    # Filter out soft-deleted items using active() query
+    items = ShoppingListItem.active().filter_by(
+        shopping_list_id=shopping_list.id
+    ).order_by(ShoppingListItem.order_index.desc()).all()
 
     items_data = [
         {
@@ -128,7 +136,8 @@ def get_shared_list_info(guid: str):
         200: List information
         404: List not found or not shared
     """
-    shopping_list = ShoppingList.query.filter_by(guid=guid).first()
+    # Filter out soft-deleted lists using active() query
+    shopping_list = ShoppingList.active().filter_by(guid=guid).first()
 
     if not shopping_list:
         raise NotFoundError('Einkaufsliste nicht gefunden')
@@ -141,6 +150,9 @@ def get_shared_list_info(guid: str):
             error_code=ErrorCodes.LIST_NOT_SHARED
         )
 
+    # Count only active items (not soft-deleted)
+    active_items = ShoppingListItem.active().filter_by(shopping_list_id=shopping_list.id)
+
     list_data = {
         'id': shopping_list.id,
         'guid': shopping_list.guid,
@@ -149,8 +161,8 @@ def get_shared_list_info(guid: str):
         'is_shared': shopping_list.is_shared,
         'created_at': shopping_list.created_at.isoformat(),
         'updated_at': shopping_list.updated_at.isoformat(),
-        'item_count': shopping_list.items.count(),
-        'checked_count': shopping_list.items.filter_by(is_checked=True).count()
+        'item_count': active_items.count(),
+        'checked_count': active_items.filter_by(is_checked=True).count()
     }
 
     return success_response(data=list_data)

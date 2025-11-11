@@ -445,6 +445,7 @@ def get_share_url(list_id: int):
 def get_trash_lists():
     """
     Get all deleted shopping lists for the current user (trash).
+    Admin users can see all deleted lists from all users.
 
     Query Parameters:
         page (int): Page number (default: 1)
@@ -459,7 +460,13 @@ def get_trash_lists():
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 20, type=int), 100)
 
-    pagination = ShoppingList.deleted().filter_by(user_id=user.id).order_by(desc(ShoppingList.deleted_at)).paginate(
+    # Bug Fix #3: Admin can see all trash lists, regular users only their own
+    if user.is_admin:
+        query = ShoppingList.deleted()
+    else:
+        query = ShoppingList.deleted().filter_by(user_id=user.id)
+
+    pagination = query.order_by(desc(ShoppingList.deleted_at)).paginate(
         page=page,
         per_page=per_page,
         error_out=False
