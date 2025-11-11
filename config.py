@@ -44,7 +44,53 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
+
+    # Security Settings
+    SESSION_COOKIE_SECURE = True  # Cookies nur über HTTPS
+    SESSION_COOKIE_HTTPONLY = True  # JavaScript kann nicht auf Cookies zugreifen
+    SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF-Schutz
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
+
+    # HTTPS Enforcement
+    PREFERRED_URL_SCHEME = 'https'
+
+    # CORS - Restriktive Einstellungen für Production
+    # Überschreibe die Base-Config CORS_ORIGINS
+    @property
+    def CORS_ORIGINS(self):
+        """Parse CORS_ORIGINS from environment variable.
+        Falls nicht gesetzt, wird eine leere Liste zurückgegeben (blockiert alle Origins).
+        """
+        origins = os.environ.get('CORS_ORIGINS', '')
+        if not origins:
+            return []
+        return [origin.strip() for origin in origins.split(',')]
+
+    # Performance Optimizations
+    COMPRESS_ALGORITHM = 'gzip'
+    COMPRESS_LEVEL = 6
+    COMPRESS_MIN_SIZE = 500  # Komprimiere nur Responses > 500 bytes
+
+    # Asset Caching
+    SEND_FILE_MAX_AGE_DEFAULT = 31536000  # 1 Jahr für statische Files
+
+    # Logging - Nur Warnings und Errors in Production
+    LOG_LEVEL = 'WARNING'
+
     # In Production: Set JWT_SECRET_KEY and SECRET_KEY via environment variables!
+    def __init__(self):
+        super().__init__()
+        # Validiere dass Secret Keys gesetzt sind
+        if self.SECRET_KEY == 'dev-secret':
+            raise ValueError(
+                "CRITICAL: SECRET_KEY must be set via environment variable in production! "
+                "Generate with: python -c 'import secrets; print(secrets.token_hex(32))'"
+            )
+        if self.JWT_SECRET_KEY == 'jwt-dev-secret-change-in-production':
+            raise ValueError(
+                "CRITICAL: JWT_SECRET_KEY must be set via environment variable in production! "
+                "Generate with: python -c 'import secrets; print(secrets.token_hex(32))'"
+            )
 
 class TestingConfig(Config):
     TESTING = True

@@ -20,6 +20,9 @@ flask-cors
 # Rate Limiting
 flask-limiter
 
+# Response Compression
+flask-compress
+
 # API Documentation
 flask-restx
 

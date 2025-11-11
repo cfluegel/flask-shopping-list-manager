@@ -2,7 +2,7 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 from flask import Flask
-from .extensions import db, migrate, login_manager, jwt, cors, limiter
+from .extensions import db, migrate, login_manager, jwt, cors, limiter, compress
 from .main import main_bp
 from .api import api_bp
 
@@ -34,6 +34,9 @@ def create_app(config_object='config.Config'):
 
     # Rate Limiter initialisieren
     limiter.init_app(app)
+
+    # Response Compression initialisieren
+    compress.init_app(app)
 
     # Rate Limiter Error Handler - German error message
     @app.errorhandler(429)

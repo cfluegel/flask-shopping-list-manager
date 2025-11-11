@@ -54,7 +54,8 @@
       "Bash(PYTHONPATH=/Users/cfluegel/Nextcloud/Development/flask-grocery-shopping-list pytest:*)",
       "Bash(PYTHONPATH=$PWD pytest:*)",
       "Bash(export PYTHONPATH=$PWD:*)",
-      "Bash(/Users/cfluegel/Nextcloud/Development/flask-grocery-shopping-list/venv/bin/pytest tests/ -v --tb=short)"
+      "Bash(/Users/cfluegel/Nextcloud/Development/flask-grocery-shopping-list/venv/bin/pytest tests/ -v --tb=short)",
+      "Bash(venv/bin/pip install:*)"
     ],
     "deny": [],
     "ask": []
