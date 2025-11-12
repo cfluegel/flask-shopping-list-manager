@@ -194,6 +194,17 @@ def edit_list(list_id: int):
         old_shared = shopping_list.is_shared
 
         shopping_list.title = form.title.data
+
+        # If is_shared status changes, regenerate GUID
+        # This invalidates the old sharing URL for security
+        if old_shared != form.is_shared.data:
+            import uuid
+            shopping_list.guid = str(uuid.uuid4())
+            current_app.logger.info(
+                f'GUID regenerated for list {list_id} due to sharing status change '
+                f'(was_shared: {old_shared}, now_shared: {form.is_shared.data})'
+            )
+
         shopping_list.is_shared = form.is_shared.data
         shopping_list.updated_at = datetime.now(timezone.utc)
         db.session.commit()

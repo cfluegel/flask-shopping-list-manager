@@ -428,3 +428,58 @@ class TestSharingEdgeCases:
         # List should also be deleted (cascade)
         response = client.get(f'/api/v1/shared/{guid}')
         assert response.status_code == 404
+
+    def test_guid_regenerated_when_republishing_list(self, client, user_headers, sample_list):
+        """Test that GUID is regenerated when republishing a list for security."""
+        # 1. Make list public
+        response = client.put(
+            f'/api/v1/lists/{sample_list.id}',
+            json={'is_shared': True},
+            headers=user_headers
+        )
+        assert response.status_code == 200
+        data = response.get_json()
+        first_guid = data['data']['guid']
+        assert data['data']['is_shared'] is True
+
+        # 2. Make list private
+        response = client.put(
+            f'/api/v1/lists/{sample_list.id}',
+            json={'is_shared': False},
+            headers=user_headers
+        )
+        assert response.status_code == 200
+        data = response.get_json()
+        second_guid = data['data']['guid']
+        assert data['data']['is_shared'] is False
+        # GUID should change when making private
+        assert second_guid != first_guid
+
+        # 3. Make list public again
+        response = client.put(
+            f'/api/v1/lists/{sample_list.id}',
+            json={'is_shared': True},
+            headers=user_headers
+        )
+        assert response.status_code == 200
+        data = response.get_json()
+        third_guid = data['data']['guid']
+        assert data['data']['is_shared'] is True
+        # GUID should change again when republishing
+        assert third_guid != second_guid
+        assert third_guid != first_guid
+
+        # 4. Verify old URLs don't work
+        # First GUID should not work
+        response = client.get(f'/api/v1/shared/{first_guid}')
+        assert response.status_code == 404
+
+        # Second GUID should not work
+        response = client.get(f'/api/v1/shared/{second_guid}')
+        assert response.status_code == 404
+
+        # Only third (current) GUID should work
+        response = client.get(f'/api/v1/shared/{third_guid}')
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['data']['guid'] == third_guid

@@ -251,11 +251,15 @@ def update_list(list_id: int):
         shopping_list.title = validated_data['title']
 
     if 'is_shared' in validated_data:
-        # If changing from shared to private, regenerate GUID
-        # This invalidates the old sharing URL
-        if shopping_list.is_shared and not validated_data['is_shared']:
+        # If is_shared status changes, regenerate GUID
+        # This invalidates the old sharing URL for security
+        if shopping_list.is_shared != validated_data['is_shared']:
             import uuid
             shopping_list.guid = str(uuid.uuid4())
+            current_app.logger.info(
+                f'GUID regenerated for list {list_id} due to sharing status change '
+                f'(was_shared: {shopping_list.is_shared}, now_shared: {validated_data["is_shared"]})'
+            )
 
         shopping_list.is_shared = validated_data['is_shared']
 
