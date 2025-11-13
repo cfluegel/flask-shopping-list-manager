@@ -75,3 +75,6 @@ logs/
 # Documentation builds
 docs/_build/
 site/
+
+# Claude Code - Local Settings (enthält absolute Pfade und Tokens)
+.claude/settings.local.json
