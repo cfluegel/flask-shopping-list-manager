@@ -109,6 +109,18 @@ def view_shared_list(guid: str):
     )
 
 
+@main_bp.route('/impressum')
+def impressum():
+    """Impressum page (legal notice)."""
+    return render_template('impressum.html')
+
+
+@main_bp.route('/datenschutz')
+def datenschutz():
+    """Datenschutzerklärung (privacy policy)."""
+    return render_template('datenschutz.html')
+
+
 # ============================================================================
 # Dashboard & Shopping List Management (Login Required)
 # ============================================================================

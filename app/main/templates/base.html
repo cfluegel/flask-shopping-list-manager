@@ -109,6 +109,11 @@
   <footer style="padding: 2rem 0; text-align: center; color: var(--color-text-muted); font-size: var(--font-size-sm);">
     <div class="container">
       <p>&copy; 2025 Einkaufsliste - Deine Shopping-List-Verwaltung</p>
+      <p style="margin-top: 0.5rem;">
+        <a href="{{ url_for('main.impressum') }}" style="color: var(--color-text-muted); text-decoration: underline;">Impressum</a>
+        &nbsp;|&nbsp;
+        <a href="{{ url_for('main.datenschutz') }}" style="color: var(--color-text-muted); text-decoration: underline;">Datenschutz</a>
+      </p>
     </div>
   </footer>
 

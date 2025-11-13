@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Datenschutzerklärung - Einkaufsliste{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 900px; margin: 2rem auto;">
+  <h1 style="margin-bottom: 2rem;">Datenschutzerklärung</h1>
+
+  <div style="line-height: 1.8;">
+    <p style="margin-bottom: 1.5rem; padding: 1rem; background-color: var(--color-warning-bg); border-left: 4px solid var(--color-warning); border-radius: var(--border-radius);">
+      <strong>⚠️ Wichtiger Hinweis:</strong> Diese Datenschutzerklärung ist eine Vorlage und muss an Ihre
+      konkrete Datenverarbeitung angepasst werden. Bitte ergänzen Sie fehlende Angaben und passen Sie
+      die Inhalte an Ihre tatsächliche Nutzung an.
+    </p>
+
+    <h2 style="margin-top: 2rem; margin-bottom: 1rem;">1. Datenschutz auf einen Blick</h2>
+
+    <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; font-size: 1.1rem;">Allgemeine Hinweise</h3>
+    <p>Die folgenden Hinweise geben einen einfachen Überblick darüber, was mit Ihren personenbezogenen Daten
+    passiert, wenn Sie diese Website besuchen. Personenbezogene Daten sind alle Daten, mit denen Sie
+    persönlich identifiziert werden können.</p>
+
+    <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; font-size: 1.1rem;">Datenerfassung auf dieser Website</h3>
+    <p><strong>Wer ist verantwortlich für die Datenerfassung auf dieser Website?</strong></p>
+    <p>Die Datenverarbeitung auf dieser Website erfolgt durch den Websitebetreiber. Dessen Kontaktdaten
+    können Sie dem Impressum dieser Website entnehmen.</p>
+
+    <p style="margin-top: 1rem;"><strong>Wie erfassen wir Ihre Daten?</strong></p>
+    <p>Ihre Daten werden zum einen dadurch erhoben, dass Sie uns diese mitteilen. Hierbei kann es sich
+    z.B. um Daten handeln, die Sie in ein Kontaktformular eingeben oder bei der Registrierung angeben.</p>
+
+    <p>Andere Daten werden automatisch beim Besuch der Website durch unsere IT-Systeme erfasst. Das sind
+    vor allem technische Daten (z.B. Internetbrowser, Betriebssystem oder Uhrzeit des Seitenaufrufs).</p>
+
+    <h2 style="margin-top: 2rem; margin-bottom: 1rem;">2. Hosting und Server-Logs</h2>
+
+    <p style="padding: 1rem; background-color: var(--color-info-bg); border-left: 4px solid var(--color-info); border-radius: var(--border-radius);">
+      <strong>📝 Bitte anpassen:</strong> Geben Sie hier an, wo und wie Sie die Anwendung hosten
+      (z.B. eigener Server, Cloud-Provider, etc.)
+    </p>
+
+    <p>Beim Zugriff auf diese Website werden automatisch Informationen in Server-Log-Dateien gespeichert:</p>
+    <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+      <li>Browsertyp und Browserversion</li>
+      <li>Verwendetes Betriebssystem</li>
+      <li>Referrer URL</li>
+      <li>Hostname des zugreifenden Rechners</li>
+      <li>Uhrzeit der Serveranfrage</li>
+      <li>IP-Adresse (anonymisiert/gekürzt)</li>
+    </ul>
+
+    <p style="margin-top: 1rem;">Diese Daten werden nicht mit anderen Datenquellen zusammengeführt und dienen
+    ausschließlich zur Sicherstellung eines störungsfreien Betriebs und zur Verbesserung unseres Angebots.</p>
+
+    <p><strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der
+    Systemsicherheit und -stabilität)</p>
+
+    <h2 style="margin-top: 2rem; margin-bottom: 1rem;">3. Benutzerkonten und Registrierung</h2>
+
+    <p>Für die Nutzung dieser Anwendung ist eine Registrierung erforderlich. Dabei werden folgende Daten erhoben:</p>
+    <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+      <li><strong>Benutzername:</strong> Zur eindeutigen Identifikation Ihres Kontos</li>
+      <li><strong>E-Mail-Adresse:</strong> Für Kontaktaufnahme und Account-Wiederherstellung</li>
+      <li><strong>Passwort:</strong> Wird verschlüsselt (gehasht mit bcrypt) gespeichert</li>
+    </ul>
+
+    <p style="margin-top: 1rem;"><strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. b DSGVO
+    (Vertragserfüllung - Bereitstellung des Dienstes)</p>
+
+    <p style="margin-top: 1rem;"><strong>Speicherdauer:</strong> Die Daten werden gespeichert, bis Sie
+    Ihr Konto löschen oder der Administrator Ihr Konto entfernt.</p>
+
+    <h2 style="margin-top: 2rem; margin-bottom: 1rem;">4. Einkaufslisten und Artikel</h2>
+
+    <p>Sie können in der Anwendung Einkaufslisten und Artikel erstellen. Dabei werden folgende Daten gespeichert:</p>
+    <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+      <li><strong>Listen-Titel:</strong> Name Ihrer Einkaufsliste</li>
+      <li><strong>Artikel:</strong> Name, Menge und Status (gekauft/nicht gekauft) der Artikel</li>
+      <li><strong>Zeitstempel:</strong> Erstellungs- und Änderungsdatum</li>
+      <li><strong>Freigabestatus:</strong> Ob die Liste öffentlich geteilt ist</li>
+      <li><strong>GUID:</strong> Eindeutige Kennung für geteilte Listen</li>
+    </ul>
+
+    <p style="margin-top: 1rem;"><strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. b DSGVO
+    (Vertragserfüllung - Bereitstellung der Hauptfunktion)</p>
+
+    <p style="margin-top: 1rem;"><strong>Speicherdauer:</strong> Bis zur Löschung durch Sie oder den
+    Administrator. Gelöschte Listen werden zunächst in den Papierkorb verschoben und können dort
+    wiederhergestellt werden.</p>
+
+    <h2 style="margin-top: 2rem; margin-bottom: 1rem;">5. Öffentlich geteilte Listen</h2>
+
+    <p style="padding: 1rem; background-color: var(--color-warning-bg); border-left: 4px solid var(--color-warning); border-radius: var(--border-radius); margin: 1rem 0;">
+      <strong>⚠️ Wichtig:</strong> Wenn Sie eine Liste als "öffentlich geteilt" markieren, kann jeder
+      mit dem entsprechenden Link (GUID) diese Liste ohne Anmeldung einsehen. Teilen Sie daher keine
+      sensiblen oder persönlichen Informationen in öffentlich geteilten Listen!
+    </p>
+
+    <p>Öffentlich geteilte Listen sind über eine eindeutige URL (GUID) für jeden abrufbar, der den Link kennt.
+    Dabei werden folgende Informationen angezeigt:</p>
+    <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+      <li>Listen-Titel</li>
+      <li>Alle Artikel mit Name, Menge und Status</li>
+      <li>Benutzername des Erstellers (NICHT E-Mail oder andere Kontaktdaten)</li>
+    </ul>
+
+    <p style="margin-top: 1rem;"><strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. a DSGVO
+    (Einwilligung durch aktives Teilen)</p>
+
+    <h2 style="margin-top: 2rem; margin-bottom: 1rem;">6. Cookies und Session-Verwaltung</h2>
+
+    <p>Diese Anwendung verwendet technisch notwendige Cookies zur Session-Verwaltung (Login-Status).
+    Diese Cookies sind für die Funktion der Website zwingend erforderlich.</p>
+
+    <p style="margin-top: 1rem;"><strong>Verwendete Cookies:</strong></p>
+    <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+      <li><strong>Session-Cookie (Flask):</strong> Speichert Ihren Login-Status (wird beim Logout oder
+      nach Ablauf der Session gelöscht)</li>
+      <li><strong>JWT-Token:</strong> Authentifizierung bei API-Anfragen (gespeichert im Browser-Local-Storage)</li>
+      <li><strong>Theme-Präferenz:</strong> Ihre Design-Einstellung (hell/dunkel)</li>
+    </ul>
+
+    <p style="margin-top: 1rem;"><strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. f DSGVO
+    (berechtigtes Interesse an der Funktionsfähigkeit der Website)</p>
+
+    <h2 style="margin-top: 2rem; margin-bottom: 1rem;">7. Ihre Rechte nach DSGVO</h2>
+
+    <p>Sie haben jederzeit das Recht:</p>
+    <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+      <li><strong>Auskunft</strong> über Ihre gespeicherten Daten zu erhalten (Art. 15 DSGVO)</li>
+      <li><strong>Berichtigung</strong> unrichtiger Daten zu verlangen (Art. 16 DSGVO)</li>
+      <li><strong>Löschung</strong> Ihrer Daten zu verlangen (Art. 17 DSGVO)</li>
+      <li><strong>Einschränkung</strong> der Verarbeitung zu verlangen (Art. 18 DSGVO)</li>
+      <li><strong>Datenübertragbarkeit</strong> zu verlangen (Art. 20 DSGVO)</li>
+      <li><strong>Widerspruch</strong> gegen die Verarbeitung einzulegen (Art. 21 DSGVO)</li>
+      <li><strong>Beschwerde bei einer Aufsichtsbehörde</strong> einzureichen (Art. 77 DSGVO)</li>
+    </ul>
+
+    <p style="margin-top: 1rem;">Zur Ausübung Ihrer Rechte wenden Sie sich bitte an die im Impressum
+    angegebene Kontaktadresse.</p>
+
+    <h2 style="margin-top: 2rem; margin-bottom: 1rem;">8. Datensicherheit</h2>
+
+    <p>Wir setzen technische und organisatorische Sicherheitsmaßnahmen ein, um Ihre Daten zu schützen:</p>
+    <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+      <li><strong>Verschlüsselung:</strong> Passwörter werden mit bcrypt gehasht (nicht im Klartext gespeichert)</li>
+      <li><strong>HTTPS:</strong> Verschlüsselte Datenübertragung (wenn konfiguriert)</li>
+      <li><strong>Zugriffskontrolle:</strong> Nur Sie und Administratoren können Ihre Daten einsehen</li>
+      <li><strong>Rate Limiting:</strong> Schutz vor Brute-Force-Angriffen</li>
+      <li><strong>JWT-Tokens:</strong> Zeitlich begrenzte Authentifizierungs-Tokens</li>
+    </ul>
+
+    <h2 style="margin-top: 2rem; margin-bottom: 1rem;">9. Weitergabe von Daten</h2>
+
+    <p>Eine Weitergabe Ihrer Daten an Dritte erfolgt nicht, außer:</p>
+    <ul style="margin-left: 2rem; margin-top: 0.5rem;">
+      <li>Sie haben ausdrücklich eingewilligt (z.B. durch öffentliches Teilen einer Liste)</li>
+      <li>Es besteht eine gesetzliche Verpflichtung zur Weitergabe</li>
+      <li>Die Weitergabe ist zur Durchsetzung unserer Rechte erforderlich</li>
+    </ul>
+
+    <h2 style="margin-top: 2rem; margin-bottom: 1rem;">10. Löschung von Daten</h2>
+
+    <p>Gelöschte Listen und Artikel werden zunächst in einen "Papierkorb" verschoben und können dort
+    wiederhergestellt werden. Nur Administratoren können Daten endgültig löschen.</p>
+
+    <p style="margin-top: 1rem;">Sie können Ihr Benutzerkonto jederzeit löschen lassen. Dabei werden
+    automatisch alle Ihre Listen und Artikel gelöscht (Kaskadierende Löschung).</p>
+
+    <h2 style="margin-top: 2rem; margin-bottom: 1rem;">11. Änderungen dieser Datenschutzerklärung</h2>
+
+    <p>Wir behalten uns vor, diese Datenschutzerklärung anzupassen, damit sie stets den aktuellen
+    rechtlichen Anforderungen entspricht. Bitte besuchen Sie diese Seite regelmäßig, um sich über
+    Änderungen zu informieren.</p>
+
+    <p style="margin-top: 1rem;"><strong>Stand:</strong> Januar 2025</p>
+
+    <div style="margin-top: 3rem; padding: 1.5rem; background-color: var(--color-surface); border-radius: var(--border-radius); border: 1px solid var(--color-border);">
+      <p style="margin: 0; font-size: var(--font-size-sm); color: var(--color-text-muted);">
+        <strong>Rechtlicher Hinweis:</strong> Diese Datenschutzerklärung dient als Vorlage und muss an Ihre
+        tatsächliche Datenverarbeitung angepasst werden. Ergänzen Sie insbesondere Angaben zu Ihrem Hosting-Provider,
+        ggf. verwendeten Analytics-Tools, und anderen Drittdiensten. Für die Richtigkeit und Vollständigkeit
+        übernehmen wir keine Haftung. Konsultieren Sie im Zweifelsfall einen spezialisierten Rechtsanwalt oder
+        Datenschutzbeauftragten.
+      </p>
+    </div>
+  </div>
+
+  <div style="margin-top: 2rem; text-align: center;">
+    <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Zurück zur Startseite</a>
+  </div>
+</div>
+{% endblock %}
