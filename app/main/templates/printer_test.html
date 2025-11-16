@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+
+{% block title %}Drucker-Test - Einkaufsliste{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+  <!-- Back Button -->
+  <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary" style="margin-bottom: 1.5rem;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="19" y1="12" x2="5" y2="12"></line>
+      <polyline points="12 19 5 12 12 5"></polyline>
+    </svg>
+    Zurück zum Dashboard
+  </a>
+
+  <!-- Page Header -->
+  <h1 style="margin-bottom: 2rem;">Drucker-Test & Diagnose</h1>
+
+  <!-- Printer Status Card -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <h2 style="margin-bottom: 1rem;">Drucker-Status</h2>
+
+    {% if is_available %}
+      <div style="padding: 1rem; background: var(--color-success-light, #d4edda); border-radius: 4px; margin-bottom: 1rem;">
+        <strong style="color: var(--color-success, #28a745);">✓ Drucker-Service verfügbar</strong>
+      </div>
+    {% else %}
+      <div style="padding: 1rem; background: var(--color-warning-light, #fff3cd); border-radius: 4px; margin-bottom: 1rem;">
+        <strong style="color: var(--color-warning, #ffc107);">⚠ Drucker-Service nicht verfügbar</strong>
+        <p style="margin-top: 0.5rem; margin-bottom: 0;">
+          Der Drucker-Service ist deaktiviert oder die python-escpos Bibliothek ist nicht installiert.
+        </p>
+      </div>
+    {% endif %}
+
+    <h3 style="margin-top: 1.5rem; margin-bottom: 1rem;">Konfiguration</h3>
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr style="border-bottom: 1px solid var(--color-border);">
+        <td style="padding: 0.75rem; font-weight: bold;">Aktiviert</td>
+        <td style="padding: 0.75rem;">
+          {% if printer_config.enabled %}
+            <span style="color: var(--color-success, #28a745);">✓ Ja</span>
+          {% else %}
+            <span style="color: var(--color-danger, #dc3545);">✗ Nein</span>
+          {% endif %}
+        </td>
+      </tr>
+      <tr style="border-bottom: 1px solid var(--color-border);">
+        <td style="padding: 0.75rem; font-weight: bold;">Host</td>
+        <td style="padding: 0.75rem; font-family: monospace;">{{ printer_config.host }}</td>
+      </tr>
+      <tr style="border-bottom: 1px solid var(--color-border);">
+        <td style="padding: 0.75rem; font-weight: bold;">Port</td>
+        <td style="padding: 0.75rem; font-family: monospace;">{{ printer_config.port }}</td>
+      </tr>
+      <tr style="border-bottom: 1px solid var(--color-border);">
+        <td style="padding: 0.75rem; font-weight: bold;">Protokoll</td>
+        <td style="padding: 0.75rem; font-family: monospace;">{{ printer_config.protocol }}</td>
+      </tr>
+      <tr style="border-bottom: 1px solid var(--color-border);">
+        <td style="padding: 0.75rem; font-weight: bold;">Timeout</td>
+        <td style="padding: 0.75rem;">{{ printer_config.timeout }} Sekunden</td>
+      </tr>
+      <tr>
+        <td style="padding: 0.75rem; font-weight: bold;">Bon-Breite</td>
+        <td style="padding: 0.75rem;">{{ printer_config.width }} Zeichen</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Test Actions Card -->
+  <div class="card">
+    <h2 style="margin-bottom: 1rem;">Test-Aktionen</h2>
+    <p class="text-muted" style="margin-bottom: 1.5rem;">
+      Verwenden Sie diese Funktionen, um die Verbindung zum Drucker zu testen.
+    </p>
+
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+      <!-- Check Network Reachability Button -->
+      <form method="POST" style="margin: 0;">
+        <input type="hidden" name="action" value="check_status">
+        <button type="submit" class="btn btn-primary" style="width: 100%;" {% if not is_available %}disabled{% endif %}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 6v6l4 2"></path>
+          </svg>
+          Netzwerkerreichbarkeit prüfen
+        </button>
+        <p class="text-muted" style="margin-top: 0.5rem; font-size: 0.875rem;">
+          Detaillierte Prüfung der Netzwerkverbindung und Druckerbereitschaft.
+        </p>
+      </form>
+
+      <!-- Test Connection Button -->
+      <form method="POST" style="margin: 0;">
+        <input type="hidden" name="action" value="test_connection">
+        <button type="submit" class="btn btn-secondary" style="width: 100%;" {% if not is_available %}disabled{% endif %}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg>
+          Verbindung testen
+        </button>
+        <p class="text-muted" style="margin-top: 0.5rem; font-size: 0.875rem;">
+          Testet die Netzwerkverbindung zum Drucker ohne zu drucken.
+        </p>
+      </form>
+
+      <!-- Print Test Page Button -->
+      <form method="POST" style="margin: 0;">
+        <input type="hidden" name="action" value="print_test_page">
+        <button type="submit" class="btn btn-secondary" style="width: 100%;" {% if not is_available %}disabled{% endif %}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <rect x="6" y="14" width="12" height="8"></rect>
+          </svg>
+          Testseite drucken
+        </button>
+        <p class="text-muted" style="margin-top: 0.5rem; font-size: 0.875rem;">
+          Druckt eine Testseite mit Informationen zur Druckerkonfiguration.
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Detailed Status Card (shown after status check) -->
+  {% if printer_status %}
+  <div class="card" style="margin-top: 2rem;">
+    <h2 style="margin-bottom: 1rem;">Detaillierter Status</h2>
+
+    <!-- Status Summary -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+      <!-- Service Available -->
+      <div style="padding: 1rem; background: {% if printer_status.service_available %}var(--color-success-light, #d4edda){% else %}var(--color-danger-light, #f8d7da){% endif %}; border-radius: 4px;">
+        <div style="font-size: 0.875rem; color: var(--color-text-muted); margin-bottom: 0.25rem;">Service</div>
+        <div style="font-weight: 600; color: {% if printer_status.service_available %}var(--color-success, #28a745){% else %}var(--color-danger, #dc3545){% endif %};">
+          {% if printer_status.service_available %}✓ Verfügbar{% else %}✗ Nicht verfügbar{% endif %}
+        </div>
+      </div>
+
+      <!-- Network Reachable -->
+      <div style="padding: 1rem; background: {% if printer_status.network_reachable %}var(--color-success-light, #d4edda){% else %}var(--color-danger-light, #f8d7da){% endif %}; border-radius: 4px;">
+        <div style="font-size: 0.875rem; color: var(--color-text-muted); margin-bottom: 0.25rem;">Netzwerk</div>
+        <div style="font-weight: 600; color: {% if printer_status.network_reachable %}var(--color-success, #28a745){% else %}var(--color-danger, #dc3545){% endif %};">
+          {% if printer_status.network_reachable %}✓ Erreichbar{% else %}✗ Nicht erreichbar{% endif %}
+        </div>
+      </div>
+
+      <!-- ESC/POS Connection -->
+      <div style="padding: 1rem; background: {% if printer_status.escpos_connection %}var(--color-success-light, #d4edda){% elif printer_status.network_reachable %}var(--color-warning-light, #fff3cd){% else %}var(--color-border){% endif %}; border-radius: 4px;">
+        <div style="font-size: 0.875rem; color: var(--color-text-muted); margin-bottom: 0.25rem;">ESC/POS</div>
+        <div style="font-weight: 600; color: {% if printer_status.escpos_connection %}var(--color-success, #28a745){% elif printer_status.network_reachable %}var(--color-warning, #ffc107){% else %}var(--color-text-muted){% endif %};">
+          {% if printer_status.escpos_connection %}✓ Verbunden{% elif printer_status.network_reachable %}⚠ Fehler{% else %}— Nicht geprüft{% endif %}
+        </div>
+      </div>
+
+      <!-- Response Time -->
+      {% if printer_status.response_time_ms %}
+      <div style="padding: 1rem; background: var(--color-bg-secondary); border-radius: 4px;">
+        <div style="font-size: 0.875rem; color: var(--color-text-muted); margin-bottom: 0.25rem;">Antwortzeit</div>
+        <div style="font-weight: 600; color: var(--color-text); font-family: monospace;">
+          {{ printer_status.response_time_ms }} ms
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Error Message -->
+    {% if printer_status.error_message %}
+    <div style="padding: 1rem; background: var(--color-danger-light, #f8d7da); border-left: 4px solid var(--color-danger, #dc3545); border-radius: 4px; margin-bottom: 1.5rem;">
+      <strong style="color: var(--color-danger, #dc3545);">Fehler:</strong>
+      <p style="margin: 0.5rem 0 0 0; color: var(--color-text);">{{ printer_status.error_message }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Detailed Information -->
+    {% if printer_status.details %}
+    <div style="margin-top: 1rem;">
+      <h3 style="margin-bottom: 0.75rem; font-size: 1rem;">Details:</h3>
+      <ul style="margin: 0; padding-left: 1.5rem; list-style: none;">
+        {% for detail in printer_status.details %}
+        <li style="margin-bottom: 0.5rem; font-family: {% if '✓' in detail or '✗' in detail or '⚠' in detail %}monospace{% else %}inherit{% endif %};">
+          {{ detail }}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Information Box -->
+  <div style="margin-top: 2rem; padding: 1.5rem; background: var(--color-bg-secondary); border-radius: 8px; border-left: 4px solid var(--color-primary);">
+    <h3 style="margin-top: 0; margin-bottom: 1rem;">ℹ Hinweise</h3>
+    <ul style="margin: 0; padding-left: 1.5rem;">
+      <li style="margin-bottom: 0.5rem;">
+        Stellen Sie sicher, dass der Drucker eingeschaltet und mit dem Netzwerk verbunden ist.
+      </li>
+      <li style="margin-bottom: 0.5rem;">
+        Der Drucker muss über die IP-Adresse {{ printer_config.host }} auf Port {{ printer_config.port }} erreichbar sein.
+      </li>
+      <li style="margin-bottom: 0.5rem;">
+        ESC/POS-kompatible Thermodrucker werden unterstützt (z.B. MUNBYN P047).
+      </li>
+      <li>
+        Die Konfiguration kann in der <code>.env</code> Datei angepasst werden.
+      </li>
+    </ul>
+  </div>
+</div>
+{% endblock %}

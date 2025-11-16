@@ -183,6 +183,54 @@ def view_list(list_id: int):
     )
 
 
+@main_bp.route('/lists/<int:list_id>/print', methods=['POST'])
+@login_required
+@limiter.limit("10 per minute")
+def print_list(list_id: int):
+    """Print a shopping list to the thermal receipt printer."""
+    from ..services.printer_service import get_printer_service
+
+    shopping_list = ShoppingList.active().filter_by(id=list_id).first_or_404()
+
+    # Check access permissions
+    if not check_list_access(shopping_list, allow_shared=True):
+        flash('Sie haben keine Berechtigung, diese Liste zu drucken.', 'danger')
+        abort(403)
+
+    # Get printer service
+    printer_service = get_printer_service()
+
+    # Check if printer is available
+    if not printer_service.is_available():
+        flash('Drucker-Service ist nicht verfügbar oder deaktiviert.', 'warning')
+        return redirect(url_for('main.view_list', list_id=list_id))
+
+    # Get optional parameter for including checked items
+    include_checked = request.form.get('include_checked', 'false').lower() == 'true'
+
+    # Print the list
+    success, message = printer_service.print_shopping_list(
+        shopping_list=shopping_list,
+        include_checked=include_checked
+    )
+
+    if success:
+        flash(message, 'success')
+        current_app.logger.info(
+            f'Benutzer "{current_user.username}" (ID: {current_user.id}) hat Liste '
+            f'"{shopping_list.title}" (ID: {list_id}) gedruckt '
+            f'(include_checked: {include_checked})'
+        )
+    else:
+        flash(f'Fehler beim Drucken: {message}', 'danger')
+        current_app.logger.error(
+            f'Fehler beim Drucken der Liste "{shopping_list.title}" (ID: {list_id}) '
+            f'durch Benutzer "{current_user.username}" (ID: {current_user.id}): {message}'
+        )
+
+    return redirect(url_for('main.view_list', list_id=list_id))
+
+
 @main_bp.route('/lists/<int:list_id>/edit', methods=['GET', 'POST'])
 @login_required
 @limiter.limit("30 per minute", methods=["POST"])
@@ -719,3 +767,71 @@ def admin_trash():
     """View all deleted shopping lists (admin)."""
     deleted_lists = ShoppingList.deleted().order_by(desc(ShoppingList.deleted_at)).all()
     return render_template('admin/trash.html', deleted_lists=deleted_lists)
+
+
+# ============================================================================
+# Printer Test & Diagnostics
+# ============================================================================
+
+@main_bp.route('/printer/test', methods=['GET', 'POST'])
+@login_required
+@limiter.limit("10 per minute")
+def printer_test():
+    """Test printer connection and print a test page."""
+    from ..services.printer_service import get_printer_service
+
+    printer_service = get_printer_service()
+    printer_status = None
+
+    if request.method == 'POST':
+        action = request.form.get('action', 'test_connection')
+
+        if action == 'check_status':
+            # Get detailed printer status
+            printer_status = printer_service.get_printer_status()
+            if printer_status['network_reachable']:
+                flash('Netzwerkerreichbarkeit erfolgreich geprüft', 'success')
+            elif printer_status['error_message']:
+                flash(printer_status['error_message'], 'danger')
+
+        elif action == 'test_connection':
+            success, message = printer_service.test_connection()
+            if success:
+                flash(message, 'success')
+            else:
+                flash(message, 'danger')
+
+        elif action == 'print_test_page':
+            success, message = printer_service.print_test_page()
+            if success:
+                flash(message, 'success')
+                current_app.logger.info(
+                    f'Benutzer "{current_user.username}" (ID: {current_user.id}) '
+                    f'hat eine Drucker-Testseite gedruckt'
+                )
+            else:
+                flash(message, 'danger')
+                current_app.logger.error(
+                    f'Fehler beim Drucken der Testseite durch Benutzer '
+                    f'"{current_user.username}" (ID: {current_user.id}): {message}'
+                )
+
+        return redirect(url_for('main.printer_test'))
+
+    # GET request - show printer status
+    is_available = printer_service.is_available()
+    printer_config = {
+        'enabled': current_app.config.get('PRINTER_ENABLED', False),
+        'host': current_app.config.get('PRINTER_HOST', 'N/A'),
+        'port': current_app.config.get('PRINTER_PORT', 'N/A'),
+        'protocol': current_app.config.get('PRINTER_PROTOCOL', 'N/A'),
+        'timeout': current_app.config.get('PRINTER_TIMEOUT', 'N/A'),
+        'width': current_app.config.get('PRINTER_WIDTH', 'N/A')
+    }
+
+    return render_template(
+        'printer_test.html',
+        is_available=is_available,
+        printer_config=printer_config,
+        printer_status=printer_status
+    )

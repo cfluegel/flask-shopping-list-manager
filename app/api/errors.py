@@ -129,6 +129,10 @@ class ErrorCodes:
     LIST_NOT_SHARED = 'LIST_NOT_SHARED'
     INSUFFICIENT_PERMISSIONS = 'INSUFFICIENT_PERMISSIONS'
 
+    # Printer Errors
+    PRINTER_NOT_AVAILABLE = 'PRINTER_NOT_AVAILABLE'
+    PRINTER_ERROR = 'PRINTER_ERROR'
+
 
 # ============================================================================
 # Custom Exception Classes

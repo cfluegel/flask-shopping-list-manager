@@ -6,6 +6,7 @@ flask_wtf
 email-validator
 gunicorn
 requests
+python-dotenv
 
 # JWT Authentication
 flask-jwt-extended
@@ -25,6 +26,11 @@ flask-compress
 
 # API Documentation
 flask-restx
+
+# Receipt Printer (ESC/POS)
+python-escpos
+pillow
+qrcode
 
 # Testing
 pytest

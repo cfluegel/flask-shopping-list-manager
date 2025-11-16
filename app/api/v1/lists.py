@@ -581,3 +581,80 @@ def permanent_delete_list(list_id: int):
     return success_response(
         message=f'Einkaufsliste "{title}" wurde endgültig gelöscht'
     )
+
+
+# ============================================================================
+# Receipt Printer
+# ============================================================================
+
+@v1_bp.route('/lists/<int:list_id>/print', methods=['POST'])
+@jwt_required()
+@list_access_required
+@limiter.limit("10 per minute")
+def print_shopping_list(list_id: int, shopping_list):
+    """
+    Print a shopping list to a thermal receipt printer.
+
+    Path Parameters:
+        list_id (int): Shopping list ID
+
+    JSON Body (optional):
+        include_checked (bool): Include checked items in printout (default: False)
+
+    Returns:
+        200: List printed successfully
+        400: Printer not available or printing failed
+        401: Unauthorized
+        403: Forbidden (no access to list)
+        404: List not found
+    """
+    from ...services.printer_service import get_printer_service
+
+    user = get_current_user()
+
+    # Get optional parameters
+    data = request.get_json() or {}
+    include_checked = data.get('include_checked', False)
+
+    # Get printer service
+    printer_service = get_printer_service()
+
+    # Check if printer is available
+    if not printer_service.is_available():
+        return error_response(
+            message='Drucker-Service ist nicht verfügbar oder deaktiviert',
+            status_code=400,
+            error_code=ErrorCodes.PRINTER_NOT_AVAILABLE
+        )
+
+    # Print the list
+    success, message = printer_service.print_shopping_list(
+        shopping_list=shopping_list,
+        include_checked=include_checked
+    )
+
+    if not success:
+        current_app.logger.error(
+            f'Fehler beim Drucken der Liste "{shopping_list.title}" (ID: {list_id}) '
+            f'durch Benutzer "{user.username}" (ID: {user.id}): {message}'
+        )
+        return error_response(
+            message=message,
+            status_code=400,
+            error_code=ErrorCodes.PRINTER_ERROR
+        )
+
+    current_app.logger.info(
+        f'Benutzer "{user.username}" (ID: {user.id}) hat via API Liste '
+        f'"{shopping_list.title}" (ID: {list_id}) gedruckt '
+        f'(include_checked: {include_checked})'
+    )
+
+    return success_response(
+        message=message,
+        data={
+            'list_id': list_id,
+            'list_title': shopping_list.title,
+            'include_checked': include_checked
+        }
+    )
