@@ -1,0 +1,47 @@
+# =============================================================================
+# Flask Grocery Shopping List - Lightweight Docker Compose (SQLite)
+# =============================================================================
+#
+# A minimal single-container setup using SQLite instead of PostgreSQL.
+# No Redis or Traefik -- suitable for personal use or quick evaluation.
+#
+# Quick start:
+#   cp examples/env-sqlite.example .env   # then edit .env
+#   docker compose -f examples/compose-sqlite.yaml up -d
+#
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Flask Application (SQLite)
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: grocery-app
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      FLASK_CONFIG: config.ProductionConfig
+      FLASK_DEBUG: "0"
+      DATABASE_URL: sqlite:////app/instance/app.db
+      RATELIMIT_STORAGE_URL: "memory://"
+      PORT: "8000"
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - app_logs:/app/logs
+      - app_instance:/app/instance
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  app_logs:
+    driver: local
+  app_instance:
+    driver: local

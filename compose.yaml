@@ -1,0 +1,149 @@
+# =============================================================================
+# Flask Grocery Shopping List - Docker Compose
+# =============================================================================
+#
+# Quick start:
+#   cp .env.example .env        # then edit .env
+#   docker compose up -d        # start app + postgres + redis
+#
+# With Traefik reverse proxy (HTTPS):
+#   docker compose --profile with-traefik up -d
+#
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Database
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: grocery-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-grocery_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_DB: ${DB_NAME:-grocery_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - grocery-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-grocery_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Redis (rate limiting)
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: grocery-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - grocery-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Flask Application
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: grocery-app
+    restart: unless-stopped
+    environment:
+      FLASK_CONFIG: config.ProductionConfig
+      FLASK_DEBUG: "0"
+      SECRET_KEY: ${SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      DATABASE_URL: postgresql://${DB_USER:-grocery_user}:${DB_PASSWORD:-changeme}@db:5432/${DB_NAME:-grocery_db}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://your-domain.com}
+      RATELIMIT_STORAGE_URL: redis://redis:6379/0
+      PORT: "8000"
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
+      GUNICORN_THREADS: ${GUNICORN_THREADS:-2}
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-60}
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - app_logs:/app/logs
+      - app_instance:/app/instance
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - grocery-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    labels:
+      # Traefik labels - only effective when Traefik is running.
+      - "traefik.enable=true"
+      - "traefik.http.routers.grocery.rule=Host(`${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.grocery.entrypoints=websecure"
+      - "traefik.http.routers.grocery.tls.certresolver=letsencrypt"
+      - "traefik.http.services.grocery.loadbalancer.server.port=8000"
+      # HTTP -> HTTPS redirect middleware
+      - "traefik.http.routers.grocery-http.rule=Host(`${DOMAIN:-localhost}`)"
+      - "traefik.http.routers.grocery-http.entrypoints=web"
+      - "traefik.http.routers.grocery-http.middlewares=grocery-https-redirect"
+      - "traefik.http.middlewares.grocery-https-redirect.redirectscheme.scheme=https"
+
+  # ---------------------------------------------------------------------------
+  # Traefik v3 Reverse Proxy (optional, activated with --profile with-traefik)
+  # ---------------------------------------------------------------------------
+  traefik:
+    image: traefik:v3.3
+    container_name: grocery-traefik
+    restart: unless-stopped
+    profiles:
+      - with-traefik
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-you@example.com}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--api.dashboard=${TRAEFIK_DASHBOARD:-false}"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "${TRAEFIK_DASHBOARD_PORT:-8080}:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - letsencrypt_data:/letsencrypt
+    networks:
+      - grocery-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  app_logs:
+    driver: local
+  app_instance:
+    driver: local
+  letsencrypt_data:
+    driver: local
+
+networks:
+  grocery-network:
+    driver: bridge

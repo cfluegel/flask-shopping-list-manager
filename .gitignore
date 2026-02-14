@@ -78,3 +78,6 @@ site/
 
 # Claude Code - Local Settings (enthält absolute Pfade und Tokens)
 .claude/settings.local.json
+
+# Private deployment
+gt57d-deployment/

@@ -56,6 +56,7 @@ docs/
 # Docker
 Dockerfile*
 docker-compose*.yml
+compose*.yaml
 .dockerignore
 
 # CI/CD
@@ -71,3 +72,6 @@ start-development.sh
 *.tmp
 *.temp
 .cache/
+
+# Private deployment
+gt57d-deployment/

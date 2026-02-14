@@ -41,11 +41,11 @@ class Config:
 
     # Receipt Printer Configuration
     PRINTER_ENABLED = os.environ.get('PRINTER_ENABLED', 'False').lower() in ('true', '1', 'yes')
-    PRINTER_HOST = os.environ.get('PRINTER_HOST', '192.168.1.230')
+    PRINTER_HOST = os.environ.get('PRINTER_HOST', '192.168.1.119')
     PRINTER_PORT = int(os.environ.get('PRINTER_PORT', '9100'))
     PRINTER_PROTOCOL = os.environ.get('PRINTER_PROTOCOL', 'network')
     PRINTER_TIMEOUT = int(os.environ.get('PRINTER_TIMEOUT', '5'))
-    PRINTER_WIDTH = int(os.environ.get('PRINTER_WIDTH', '32'))
+    PRINTER_WIDTH = int(os.environ.get('PRINTER_WIDTH', '80'))
 
 class DevelopmentConfig(Config):
     DEBUG = True
