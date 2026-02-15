@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Einkaufsliste - Progressive Web App">
+  <meta name="theme-color" content="#ff8c42">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Einkaufsliste">
+  <title>Einkaufsliste</title>
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛒</text></svg>">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="{{ url_for('pwa.manifest') }}">
+
+  <!-- Apple Touch Icon -->
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='pwa/icons/icon-192.png') }}">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='pwa/css/pwa.css') }}">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="pwa-header" id="pwa-header">
+      <div class="pwa-header-inner">
+        <button class="pwa-back-btn" id="back-btn" aria-label="Zurück" style="display:none;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <h1 class="pwa-title" id="pwa-title">Einkaufsliste</h1>
+        <div class="pwa-header-actions">
+          <button class="pwa-theme-btn" id="theme-btn" aria-label="Theme wechseln">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="theme-icon">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+          </button>
+          <button class="pwa-logout-btn" id="logout-btn" aria-label="Abmelden" style="display:none;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="pwa-content" id="pwa-content">
+      <div class="pwa-loading">
+        <div class="spinner"></div>
+      </div>
+    </main>
+
+    <!-- Toast Container -->
+    <div class="pwa-toast-container" id="toast-container"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="{{ url_for('static', filename='pwa/js/auth.js') }}"></script>
+  <script src="{{ url_for('static', filename='pwa/js/api.js') }}"></script>
+  <script src="{{ url_for('static', filename='pwa/js/router.js') }}"></script>
+  <script src="{{ url_for('static', filename='pwa/js/views/login-view.js') }}"></script>
+  <script src="{{ url_for('static', filename='pwa/js/views/lists-view.js') }}"></script>
+  <script src="{{ url_for('static', filename='pwa/js/views/list-detail-view.js') }}"></script>
+  <script src="{{ url_for('static', filename='pwa/js/app.js') }}"></script>
+</body>
+</html>

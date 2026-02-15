@@ -5,6 +5,7 @@ from flask import Flask
 from .extensions import db, migrate, login_manager, jwt, cors, limiter, compress
 from .main import main_bp
 from .api import api_bp
+from .pwa import pwa_bp
 
 
 def create_app(config_object='config.Config'):
@@ -85,6 +86,7 @@ def create_app(config_object='config.Config'):
     # Blueprints registrieren
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(pwa_bp, url_prefix='/pwa')
 
     # Error Handlers registrieren (before docs blueprint to avoid conflicts)
     from .api.errors import register_error_handlers
