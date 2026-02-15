@@ -84,24 +84,10 @@
             <circle cx="12" cy="12" r="10"></circle>
             <path d="M12 6v6l4 2"></path>
           </svg>
-          Netzwerkerreichbarkeit prüfen
+          Druckerstatus prüfen
         </button>
         <p class="text-muted" style="margin-top: 0.5rem; font-size: 0.875rem;">
           Detaillierte Prüfung der Netzwerkverbindung und Druckerbereitschaft.
-        </p>
-      </form>
-
-      <!-- Test Connection Button -->
-      <form method="POST" style="margin: 0;">
-        <input type="hidden" name="action" value="test_connection">
-        <button type="submit" class="btn btn-secondary" style="width: 100%;" {% if not is_available %}disabled{% endif %}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-          </svg>
-          Verbindung testen
-        </button>
-        <p class="text-muted" style="margin-top: 0.5rem; font-size: 0.875rem;">
-          Testet die Netzwerkverbindung zum Drucker ohne zu drucken.
         </p>
       </form>
 

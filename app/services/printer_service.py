@@ -6,9 +6,13 @@ via network connection (Raw TCP/IP on port 9100).
 """
 
 import socket
+import time
 from datetime import datetime
 from typing import Optional, List, Tuple
 from flask import current_app
+
+_status_cache = {'result': None, 'timestamp': 0}
+_CACHE_TTL = 60  # seconds
 
 try:
     from escpos.printer import Network
@@ -119,40 +123,20 @@ class PrinterService:
 
         return status
 
-    def test_connection(self) -> Tuple[bool, str]:
+    def get_cached_status(self) -> dict:
         """
-        Test connection to the printer.
+        Get printer status with 60-second in-memory cache.
 
         Returns:
-            Tuple of (success: bool, message: str)
+            Dictionary with status information (same as get_printer_status)
         """
-        if not self.is_available():
-            return False, "Drucker-Service nicht verfügbar oder deaktiviert"
-
-        try:
-            # Test basic network connectivity
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(self.timeout)
-            sock.connect((self.host, self.port))
-            sock.close()
-
-            current_app.logger.info(f"Printer connection test successful: {self.host}:{self.port}")
-            return True, f"Verbindung zu Drucker erfolgreich ({self.host}:{self.port})"
-
-        except socket.timeout:
-            msg = f"Zeitüberschreitung bei Verbindung zu {self.host}:{self.port}"
-            current_app.logger.error(msg)
-            return False, msg
-
-        except socket.error as e:
-            msg = f"Verbindungsfehler zu {self.host}:{self.port}: {str(e)}"
-            current_app.logger.error(msg)
-            return False, msg
-
-        except Exception as e:
-            msg = f"Unerwarteter Fehler beim Drucker-Test: {str(e)}"
-            current_app.logger.error(msg)
-            return False, msg
+        now = time.time()
+        if _status_cache['result'] and (now - _status_cache['timestamp']) < _CACHE_TTL:
+            return _status_cache['result']
+        result = self.get_printer_status()
+        _status_cache['result'] = result
+        _status_cache['timestamp'] = now
+        return result
 
     def print_test_page(self) -> Tuple[bool, str]:
         """
@@ -168,10 +152,10 @@ class PrinterService:
             printer = Network(self.host, self.port, timeout=self.timeout)
 
             # Print test page
-            printer.set(align='center', text_type='B', width=2, height=2)
+            printer.set(align='center', bold=True, width=2, height=2)
             printer.text("TESTDRUCK\n")
 
-            printer.set(align='center', text_type='normal')
+            printer.set(align='center', bold=False, width=1, height=1)
             printer.text("=" * self.width + "\n\n")
 
             printer.set(align='left')
@@ -223,7 +207,7 @@ class PrinterService:
             # Get items to print
             items = shopping_list.items
             if not include_checked:
-                items = [item for item in items if not item.checked]
+                items = [item for item in items if not item.is_checked]
 
             if not items:
                 return False, "Keine Artikel zum Drucken (alle abgehakt)"
@@ -259,7 +243,7 @@ class PrinterService:
     def _print_header(self, printer, shopping_list):
         """Print receipt header with list title and date."""
         # Title (large, bold, centered)
-        printer.set(align='center', text_type='B', width=2, height=2)
+        printer.set(align='center', bold=True, width=2, height=2)
 
         # Wrap title if too long
         title = shopping_list.title
@@ -269,62 +253,67 @@ class PrinterService:
         printer.text(f"{title}\n")
 
         # Separator
-        printer.set(align='center', text_type='normal')
+        printer.set(align='center', bold=False, width=1, height=1)
         printer.text("=" * self.width + "\n\n")
-
-        # Date and time
-        printer.set(align='left')
-        now = datetime.now()
-        printer.text(f"Datum: {now.strftime('%d.%m.%Y %H:%M')}\n")
-
-        # Owner information
-        if shopping_list.user:
-            printer.text(f"Erstellt von: {shopping_list.user.username}\n")
 
         printer.text("\n")
 
     def _print_items(self, printer, items: List):
         """Print shopping list items."""
-        printer.set(align='left', text_type='normal')
+        printer.set(align='left', bold=False)
 
+        # Pass 1: Format quantities and find max width for alignment
+        formatted_items = []
+        max_qty_len = 0
         for item in items:
-            # Checkbox symbol
-            checkbox = "☑" if item.checked else "☐"
+            qty = item.quantity or "1"
+            if qty.isdigit():
+                qty_str = f"{qty}x"
+            else:
+                qty_str = qty
+            formatted_items.append((item, qty_str))
+            if len(qty_str) > max_qty_len:
+                max_qty_len = len(qty_str)
 
-            # Format quantity
-            quantity_str = ""
-            if item.quantity and item.quantity > 1:
-                quantity_str = f"{item.quantity}x "
+        # Pass 2: Print each item with padded quantity for column alignment
+        for item, qty_str in formatted_items:
+            checkbox = "[x]" if item.is_checked else "[ ]"
+
+            # Pad quantity to align article names: max_qty_len + 2 spaces
+            padded_qty = qty_str.ljust(max_qty_len + 2)
 
             # Item name (truncate if too long)
-            # Reserve 4 chars for checkbox and spacing, some for quantity
-            max_name_length = self.width - 4 - len(quantity_str)
+            # Reserve 5 chars for checkbox and spacing, rest for quantity column
+            max_name_length = self.width - 5 - len(padded_qty)
             name = item.name
             if len(name) > max_name_length:
                 name = name[:max_name_length - 3] + "..."
 
             # Print item line
-            line = f"{checkbox} {quantity_str}{name}\n"
+            line = f"{checkbox} {padded_qty}{name}\n"
 
-            # If checked, use strikethrough effect (print with different style)
-            if item.checked:
-                printer.set(text_type='U')  # Underlined as strikethrough alternative
+            # If checked, use underline as strikethrough alternative
+            if item.is_checked:
+                printer.set(underline=1)
                 printer.text(line)
-                printer.set(text_type='normal')
+                printer.set(underline=0)
             else:
                 printer.text(line)
+
+            # Blank line between items for readability
+            printer.text("\n")
 
         printer.text("\n")
 
     def _print_footer(self, printer):
         """Print receipt footer."""
-        printer.set(align='center', text_type='normal')
+        printer.set(align='center', bold=False)
         printer.text("=" * self.width + "\n\n")
 
-        printer.set(text_type='B')
+        printer.set(bold=True)
         printer.text("Viel Erfolg beim Einkauf!\n\n")
 
-        printer.set(text_type='normal')
+        printer.set(bold=False)
         printer.text("Einkaufsliste App\n")
         printer.text(datetime.now().strftime('%d.%m.%Y %H:%M:%S') + "\n\n")
 

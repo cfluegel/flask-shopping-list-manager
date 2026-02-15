@@ -45,7 +45,7 @@ class Config:
     PRINTER_PORT = int(os.environ.get('PRINTER_PORT', '9100'))
     PRINTER_PROTOCOL = os.environ.get('PRINTER_PROTOCOL', 'network')
     PRINTER_TIMEOUT = int(os.environ.get('PRINTER_TIMEOUT', '5'))
-    PRINTER_WIDTH = int(os.environ.get('PRINTER_WIDTH', '80'))
+    PRINTER_WIDTH = int(os.environ.get('PRINTER_WIDTH', '48'))
 
 class DevelopmentConfig(Config):
     DEBUG = True

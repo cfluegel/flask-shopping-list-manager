@@ -78,6 +78,10 @@ def create_app(config_object='config.Config'):
         jti = jwt_payload['jti']
         return RevokedToken.is_jti_blacklisted(jti)
 
+    @app.context_processor
+    def inject_printer_config():
+        return {'printer_enabled': app.config.get('PRINTER_ENABLED', False)}
+
     # Blueprints registrieren
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')

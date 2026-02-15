@@ -305,6 +305,28 @@ main {
   }
 }
 
+/* Printer Status Indicator */
+.printer-status {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem;
+  color: var(--color-text-muted);
+}
+.printer-status:hover { color: var(--color-text); }
+
+.printer-status-dot {
+  position: absolute;
+  bottom: 4px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+.printer-status-dot.online { background: var(--color-success, #28a745); }
+.printer-status-dot.offline { background: var(--color-danger, #dc3545); }
+
 /* Theme Switcher */
 .theme-switcher {
   display: flex;

@@ -773,6 +773,20 @@ def admin_trash():
 # Printer Test & Diagnostics
 # ============================================================================
 
+@main_bp.route('/printer/status')
+@login_required
+@limiter.limit("10 per minute")
+def printer_status_api():
+    """JSON endpoint for navbar printer status indicator."""
+    from ..services.printer_service import get_printer_service
+
+    printer_service = get_printer_service()
+    if not printer_service.enabled:
+        return jsonify({'available': False})
+    status = printer_service.get_cached_status()
+    return jsonify({'available': True, 'reachable': status['network_reachable']})
+
+
 @main_bp.route('/printer/test', methods=['GET', 'POST'])
 @login_required
 @limiter.limit("10 per minute")
@@ -784,7 +798,7 @@ def printer_test():
     printer_status = None
 
     if request.method == 'POST':
-        action = request.form.get('action', 'test_connection')
+        action = request.form.get('action', 'check_status')
 
         if action == 'check_status':
             # Get detailed printer status
@@ -793,13 +807,6 @@ def printer_test():
                 flash('Netzwerkerreichbarkeit erfolgreich geprüft', 'success')
             elif printer_status['error_message']:
                 flash(printer_status['error_message'], 'danger')
-
-        elif action == 'test_connection':
-            success, message = printer_service.test_connection()
-            if success:
-                flash(message, 'success')
-            else:
-                flash(message, 'danger')
 
         elif action == 'print_test_page':
             success, message = printer_service.print_test_page()

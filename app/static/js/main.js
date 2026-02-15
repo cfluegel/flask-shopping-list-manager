@@ -547,6 +547,28 @@ class ShoppingListManager {
 }
 
 // ============================================================================
+// Printer Status Indicator
+// ============================================================================
+
+class PrinterStatus {
+  constructor() {
+    this.dot = document.getElementById('printer-status-dot');
+    if (this.dot) this.check();
+  }
+
+  async check() {
+    try {
+      const res = await fetch('/printer/status');
+      const data = await res.json();
+      if (!data.available) return;
+      this.dot.classList.add(data.reachable ? 'online' : 'offline');
+    } catch {
+      this.dot.classList.add('offline');
+    }
+  }
+}
+
+// ============================================================================
 // Form Enhancements
 // ============================================================================
 
@@ -751,6 +773,7 @@ document.addEventListener('DOMContentLoaded', () => {
   new MobileNav();
   new FlashMessages();
   new ShoppingListManager();
+  new PrinterStatus();
   new FormEnhancements();
   new KeyboardShortcuts();
   new LazyLoad();
