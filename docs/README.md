@@ -16,7 +16,8 @@ This directory contains all project documentation.
 
 ### Backend & Frontend Documentation
 - [BACKEND_DOCUMENTATION.md](BACKEND_DOCUMENTATION.md) - Backend Architecture & Routes
-- [FRONTEND_DESIGN.md](FRONTEND_DESIGN.md) - Frontend Design System & PWA
+- [FRONTEND_DESIGN.md](FRONTEND_DESIGN.md) - Frontend Design System
+- [PWA.md](PWA.md) - Progressive Web App Documentation
 
 ### Deployment & Testing
 - [DEPLOYMENT.md](DEPLOYMENT.md) - Docker & Production Deployment Guide
