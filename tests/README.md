@@ -125,7 +125,8 @@ pytest tests/ -k "soft_delete"
 | `test_sharing.py` | 24 | Shared List Public Access |
 | `test_optimistic_locking.py` | 21 | Version Control & Conflicts |
 | `test_soft_delete.py` | 60 | Trash & Restore Functionality |
-| **GESAMT** | **320** | |
+| `test_pwa.py` | 197 | PWA Blueprint, Routes, Templates, Service Worker |
+| **GESAMT** | **518** | |
 
 ## Fixtures
 

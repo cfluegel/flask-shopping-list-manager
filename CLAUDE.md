@@ -4,16 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Flask-based grocery shopping list manager with the following key requirements:
-- User authentication required for all functionality except shared lists
-- Shopping lists are private to creators, shareable via GUID links
-- Lists contain items with: checkbox, quantity, and item name
-- Checked items display with strikethrough
+Flask-based grocery shopping list manager with:
+- User authentication (Flask-Login for web, JWT for API)
+- Shopping lists private to creators, shareable via GUID links
+- List items with checkbox, quantity, and name (checked items show strikethrough)
 - Two user roles: administrators and regular users
 - Default admin account: `admin` / `admin123`
 - Admin capabilities: user management (CRUD), view/delete all users' lists
-- Deleting a user must cascade delete their lists
-- REST API planned for future mobile app access with JWT authentication
+- Deleting a user cascade-deletes their lists
+- REST API at `/api/v1/` with JWT authentication
+- Progressive Web App (PWA) at `/pwa/` with offline support
+- Soft delete with trash/restore for lists and items
+- Optimistic locking (version field) for concurrent edit detection
+- ESC/POS thermal receipt printer support (optional)
+- Docker deployment with optional Traefik reverse proxy
 
 ## Development Commands
 
@@ -22,27 +26,24 @@ Flask-based grocery shopping list manager with the following key requirements:
 python run.py
 ```
 
-Environment variables:
-- `FLASK_CONFIG`: Config class to use (default: `config.Config`)
-  - Options: `config.DevelopmentConfig`, `config.ProductionConfig`, `config.TestingConfig`
-- `FLASK_RUN_HOST`: Host to bind to (default: `127.0.0.1`)
-- `FLASK_RUN_PORT`: Port to bind to (default: `5000`)
-- `FLASK_DEBUG`: Debug mode (default: `False`)
-- `SECRET_KEY`: Flask secret key (default: `dev-secret`)
-- `DATABASE_URL`: Database connection string (default: `sqlite:///app.db`)
+### Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `FLASK_CONFIG` | `config.Config` | Config class (`config.DevelopmentConfig`, `config.ProductionConfig`, `config.TestingConfig`) |
+| `SECRET_KEY` | `dev-secret` | Flask session secret (**must change in production**) |
+| `JWT_SECRET_KEY` | `jwt-dev-secret-...` | JWT signing secret (**must change in production**) |
+| `DATABASE_URL` | `sqlite:///app.db` | Database connection string |
+| `CORS_ORIGINS` | `*` | Comma-separated allowed origins |
+| `RATELIMIT_STORAGE_URL` | `memory://` | Rate-limit backend (`redis://...` in Docker) |
+| `PRINTER_ENABLED` | `false` | Enable ESC/POS receipt printing |
+| `PRINTER_HOST` | `192.168.1.119` | Printer IP address |
+| `PRINTER_PORT` | `9100` | Printer TCP port |
 
 ### Database Management
 ```bash
-# Initialize migrations (if not already done)
-flask db init
-
-# Create a new migration
 flask db migrate -m "Description of changes"
-
-# Apply migrations
 flask db upgrade
-
-# Rollback migration
 flask db downgrade
 ```
 
@@ -51,64 +52,94 @@ flask db downgrade
 pytest
 ```
 
-Testing configuration uses in-memory SQLite database (`config.TestingConfig`).
+518 tests across 10 test files. Testing uses in-memory SQLite (`config.TestingConfig`).
 
 ## Architecture
 
 ### Application Structure
 
-The application follows the Flask application factory pattern with blueprints:
+Flask application factory pattern with blueprints:
 
-- **Application Factory** (`app/__init__.py`): `create_app(config_object)` initializes Flask app, extensions (SQLAlchemy, Flask-Migrate, Flask-Login), and registers blueprints
-- **Extensions** (`app/extensions.py`): Centralized initialization of Flask extensions (db, migrate, login_manager)
-- **Configuration** (`config.py`): Three config classes (Config, DevelopmentConfig, ProductionConfig, TestingConfig) with environment-based settings
+- **Application Factory** (`app/__init__.py`): `create_app(config_object)` initializes Flask, extensions (SQLAlchemy, Flask-Migrate, Flask-Login, Flask-JWT-Extended, Flask-CORS, Flask-Limiter), and registers blueprints
+- **Extensions** (`app/extensions.py`): Centralized extension initialization
+- **Configuration** (`config.py`): Config, DevelopmentConfig, ProductionConfig, TestingConfig
 
 ### Blueprints
 
-1. **Main Blueprint** (`app/main/`): Web interface with templates and routes
-   - Login view: `main.login` (also serves as `login_manager.login_view`)
-   - Routes defined in `app/main/routes.py`
-   - Forms use Flask-WTF in `app/main/forms.py`
+1. **Main Blueprint** (`app/main/`): Server-rendered web UI with Jinja2 templates
+   - Login view: `main.login` (also `login_manager.login_view`)
+   - Routes in `app/main/routes.py`, forms in `app/main/forms.py`
    - Templates in `app/main/templates/`
 
-2. **API Blueprint** (`app/api/`): REST API (currently commented out in app initialization)
-   - Currently has a basic `/api/status` endpoint
-   - Intended for JWT-based authentication (not yet implemented)
-   - Uncomment registration in `app/__init__.py` when ready
+2. **API Blueprint** (`app/api/`): REST API at `/api/v1/` with JWT authentication
+   - Sub-modules: `auth.py`, `lists.py`, `items.py`, `shared.py`, `users.py`, `admin.py`
+   - Marshmallow schemas for validation (`app/api/schemas.py`)
+   - Custom decorators (`app/api/decorators.py`)
+   - Global error handlers (`app/api/errors.py`) — catches ALL HTTP errors app-wide
 
-### Database Models
+3. **PWA Blueprint** (`app/pwa/`): Progressive Web App SPA shell
+   - Serves SPA shell via Jinja, JS handles routing via hash-based router
+   - Static assets in `app/static/pwa/` (JS modules, CSS, icons, service worker, manifest)
 
-**User Model** (`app/models.py`):
-- Fields: `id`, `username`, `email`, `password_hash`
-- Password hashing via Werkzeug (methods: `set_password()`, `check_password()`)
-- Flask-Login integration via `@login_manager.user_loader`
+### Services
 
-**Shopping List Models**: Not yet implemented, but requirements specify:
-- Lists identified by GUID for sharing
-- Items with checkbox state, quantity, and name
-- User ownership relationship (one-to-many: User -> Lists)
-- Cascade delete when user is deleted
+- **PrinterService** (`app/services/printer_service.py`): ESC/POS thermal printer integration via network/TCP
 
-### Authentication Flow
+### Database Models (`app/models.py`)
 
-- Flask-Login manages user sessions
-- Login view at `/login` using `LoginForm`
-- `login_manager.login_view` redirects unauthenticated users to `main.login`
-- Protected routes use `@login_required` decorator
-- Logout clears session and redirects to index
+**User**: `id`, `username`, `email`, `password_hash`, `is_admin`, `created_at`
+- Relationship: `shopping_lists` (cascade delete)
 
-## Design Requirements
+**ShoppingList**: `id`, `guid`, `title`, `user_id`, `is_shared`, `version`, `created_at`, `updated_at`, `deleted_at`
+- Soft delete: `soft_delete()`, `restore()`, class methods `active()`, `deleted()`
+- Optimistic locking: `check_version()`, `increment_version()`
+- Relationship: `items` (cascade delete, ordered by `order_index`)
 
-**Themes**:
-- Light theme: Orange and pastel tones
-- Dark theme: Dark blue base color
-- Responsive design for desktop and mobile
+**ShoppingListItem**: `id`, `shopping_list_id`, `name`, `quantity`, `is_checked`, `order_index`, `version`, `created_at`, `deleted_at`
+- Same soft delete and optimistic locking methods as ShoppingList
 
-**UI Features**:
-- Dynamic item addition without page refresh
-- Strikethrough styling for checked items
-- Input fields positioned above the list
+**RevokedToken**: `id`, `jti`, `token_type`, `user_id`, `revoked_at`, `expires_at`
+- JWT blacklist for logout support
+
+### Authentication
+
+- **Web UI**: Flask-Login session-based auth, `@login_required` decorator
+- **API**: JWT via Flask-JWT-Extended, `@jwt_required()` decorator
+  - Access tokens (30 min), refresh tokens (30 days)
+  - Token blacklisting on logout
+
+### API Response Format
+```json
+{"success": true, "data": { ... }}
+{"success": false, "error": "...", "message": "..."}
+```
+
+## Testing
+
+518 tests in 10 files:
+
+| File | Tests | Focus |
+|---|---|---|
+| `test_auth.py` | 25 | JWT auth (register, login, refresh, logout) |
+| `test_models.py` | 41 | Database models |
+| `test_lists.py` | 30 | Shopping list CRUD |
+| `test_items.py` | 46 | Item CRUD, toggle, reorder |
+| `test_admin.py` | 44 | Admin endpoints |
+| `test_permissions.py` | 29 | Authorization & access control |
+| `test_sharing.py` | 24 | Shared list public access |
+| `test_optimistic_locking.py` | 21 | Version control & conflicts |
+| `test_soft_delete.py` | 60 | Trash & restore |
+| `test_pwa.py` | 197 | PWA routes, views, service worker |
+
+Fixtures in `tests/conftest.py` use `scope='function'`. JWT auth headers: `create_access_token(identity=str(user.id))`.
+
+## Design
+
+- **Light theme**: Orange and pastel tones
+- **Dark theme**: Dark blue base color
+- Responsive design (mobile-first)
+- PWA: installable, offline-capable via service worker
 
 ## Language
 
-Application is in German (UI messages, flash notifications, form labels).
+Application UI is in German (messages, form labels, flash notifications).

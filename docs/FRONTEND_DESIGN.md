@@ -333,30 +333,67 @@ CSS-Klassen folgen BEM-ähnlicher Konvention:
 
 ---
 
-## Zukünftige Erweiterungen
+## Progressive Web App (PWA)
 
-### Geplant:
-1. **PWA Support:**
-   - Service Worker
-   - Offline-Funktionalität
-   - Install-Prompt
-   - App-Manifest
+Die PWA ist unter `/pwa/` verfügbar und bietet eine native App-ähnliche Erfahrung.
 
-2. **Erweiterte Animationen:**
+### Architektur
+
+- **SPA-Shell:** Jinja2-Template (`app/pwa/templates/pwa.html`) als Einstiegspunkt
+- **Blueprint:** `app/pwa/` mit eigenem Template-Ordner
+- **Statische Assets:** `app/static/pwa/`
+- **Kein Build-Step:** Vanilla JavaScript mit ES6-Modulen
+
+### Routing
+
+Hash-basiertes Routing (`#/login`, `#/lists`, `#/lists/1`):
+- `app/static/pwa/js/router.js` — Router-Klasse
+- Views werden dynamisch geladen und gerendert
+
+### JavaScript-Module
+
+| Datei | Beschreibung |
+|-------|--------------|
+| `js/app.js` | App-Einstiegspunkt, initialisiert Router und Views |
+| `js/auth.js` | JWT-Authentifizierung, Token-Storage |
+| `js/api.js` | API-Client für `/api/v1/` Endpoints |
+| `js/router.js` | Hash-basierter Router |
+| `js/views/login-view.js` | Login-Screen |
+| `js/views/lists-view.js` | Listen-Übersicht |
+| `js/views/list-detail-view.js` | Listen-Detail mit Items |
+
+### Offline & Caching
+
+- **Service Worker** (`app/static/pwa/sw.js`): Caching von statischen Assets
+- **Manifest** (`app/static/pwa/manifest.json`): Install-to-Homescreen
+- **Icons:** 192x192 und 512x512 PNG
+
+### Screens
+
+1. **Login:** JWT-Authentifizierung gegen `/api/v1/auth/login`
+2. **Listen-Übersicht:** Alle eigenen Listen mit Erstellen-Button
+3. **Listen-Detail:** Items anzeigen, hinzufügen, abhaken, löschen
+
+### Testing
+
+197 PWA-Tests in `tests/test_pwa.py` (16 Test-Klassen), die Blueprint-Registrierung, Route-Handling, Template-Rendering, Service-Worker-Auslieferung und Manifest-Konfiguration abdecken.
+
+---
+
+## Mögliche Erweiterungen
+
+1. **Erweiterte Animationen:**
    - Drag & Drop für Item-Reordering
    - Swipe-to-Delete auf Mobile
-   - Smooth Page-Transitions
 
-3. **Weitere Features:**
+2. **Weitere Features:**
    - Bulk-Actions (alle abhaken/löschen)
    - Item-Kategorien mit Farben
    - Item-Suche/Filter
-   - Print-Stylesheet-Optimierung
 
-4. **Performance:**
+3. **Performance:**
    - CSS/JS Minification
    - Image Optimization
-   - Critical CSS Inlining
 
 ---
 

@@ -13,6 +13,7 @@ optionally print them on an ESC/POS thermal receipt printer.
 - **Soft-delete / trash** with automatic cleanup
 - **Dark and light themes** (dark-blue / orange-pastel)
 - **Responsive UI** for desktop and mobile
+- **Progressive Web App** (PWA) at `/pwa/` -- install to homescreen, offline support
 - **REST API** (`/api/v1/`) with JWT authentication
 - **ESC/POS receipt printer** support (optional)
 - **Docker deployment** with optional Traefik v3 reverse proxy for HTTPS
