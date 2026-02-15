@@ -64,15 +64,8 @@ class ProductionConfig(Config):
 
     # CORS - Restriktive Einstellungen für Production
     # Überschreibe die Base-Config CORS_ORIGINS
-    @property
-    def CORS_ORIGINS(self):
-        """Parse CORS_ORIGINS from environment variable.
-        Falls nicht gesetzt, wird eine leere Liste zurückgegeben (blockiert alle Origins).
-        """
-        origins = os.environ.get('CORS_ORIGINS', '')
-        if not origins:
-            return []
-        return [origin.strip() for origin in origins.split(',')]
+    # Falls CORS_ORIGINS nicht gesetzt, wird eine leere Liste zurückgegeben (blockiert alle Origins)
+    CORS_ORIGINS = [origin.strip() for origin in os.environ.get('CORS_ORIGINS', '').split(',') if origin.strip()]
 
     # Performance Optimizations
     COMPRESS_ALGORITHM = 'gzip'
