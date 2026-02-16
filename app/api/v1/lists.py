@@ -587,6 +587,25 @@ def permanent_delete_list(list_id: int):
 # Receipt Printer
 # ============================================================================
 
+@v1_bp.route('/printer/status', methods=['GET'])
+@jwt_required()
+def printer_status():
+    """
+    Get printer availability and reachability status.
+
+    Returns:
+        200: {available: bool, reachable: bool}
+    """
+    from ...services.printer_service import get_printer_service
+
+    printer_service = get_printer_service()
+    if not printer_service.enabled:
+        return success_response(data={'available': False})
+
+    status = printer_service.get_cached_status()
+    return success_response(data={'available': True, 'reachable': status['network_reachable']})
+
+
 @v1_bp.route('/lists/<int:list_id>/print', methods=['POST'])
 @jwt_required()
 @list_access_required

@@ -5,7 +5,7 @@
  * - Network-only for API requests
  */
 
-const CACHE_VERSION = 'pwa-v1';
+const CACHE_VERSION = 'pwa-v2';
 const APP_SHELL_URLS = [
   '/pwa/',
   '/pwa/manifest.json',

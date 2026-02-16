@@ -55,7 +55,8 @@
 
 .pwa-back-btn,
 .pwa-logout-btn,
-.pwa-theme-btn {
+.pwa-theme-btn,
+.pwa-printer-btn {
   background: none;
   border: none;
   cursor: pointer;
@@ -73,9 +74,32 @@
 
 .pwa-back-btn:hover,
 .pwa-logout-btn:hover,
-.pwa-theme-btn:hover {
+.pwa-theme-btn:hover,
+.pwa-printer-btn:hover {
   background-color: var(--color-surface-hover);
   color: var(--color-text);
+}
+
+.pwa-printer-btn {
+  position: relative;
+}
+
+.pwa-printer-dot {
+  position: absolute;
+  bottom: 6px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+
+.pwa-printer-dot.online {
+  background: var(--color-success, #28a745);
+}
+
+.pwa-printer-dot.offline {
+  background: var(--color-danger, #dc3545);
 }
 
 /* ============================================================================

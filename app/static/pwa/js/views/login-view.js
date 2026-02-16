@@ -57,6 +57,7 @@ class LoginView {
 
     try {
       await apiClient.login(username, password);
+      App.checkPrinterStatus();
       router.navigate('#/lists');
     } catch (err) {
       errorEl.textContent = err.message;
