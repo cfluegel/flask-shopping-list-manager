@@ -12,7 +12,7 @@ from flask_login import current_user, login_required
 from sqlalchemy import desc
 
 from . import api_bp
-from ..extensions import db
+from ..extensions import db, limiter
 from ..models import ShoppingList, ShoppingListItem, User
 from ..utils import check_list_access
 
@@ -22,6 +22,7 @@ from ..utils import check_list_access
 # ============================================================================
 
 @api_bp.route('/status')
+@limiter.exempt
 def status():
     """API health check endpoint."""
     return jsonify({

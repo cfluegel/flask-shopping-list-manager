@@ -350,6 +350,7 @@ curl http://localhost:8000/api/status
 ```
 
 Returns `200 OK` with JSON status when the application is healthy.
+This endpoint is exempt from rate limiting to support Docker healthchecks.
 
 ### Sentry Integration (optional)
 

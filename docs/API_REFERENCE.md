@@ -167,6 +167,8 @@ API endpoints are rate-limited. Rate limit headers are included in responses:
 - `X-RateLimit-Remaining`
 - `X-RateLimit-Reset`
 
+The health check endpoint (`GET /api/status`) is exempt from rate limiting to support Docker healthchecks.
+
 Backend: configurable via `RATELIMIT_STORAGE_URL` (memory or Redis).
 
 ---

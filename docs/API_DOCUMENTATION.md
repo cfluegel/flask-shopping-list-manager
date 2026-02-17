@@ -164,6 +164,7 @@ Die API implementiert Ratenbegrenzung zum Schutz vor Missbrauch:
 | Passwort-Änderungen | 5 Anfragen pro Stunde |
 | Allgemeine Operationen | 30 Anfragen pro Minute |
 | Admin-Operationen | 20 Anfragen pro Stunde |
+| Health Check (`/api/status`) | Kein Limit (exempt) |
 
 ### Rate Limit Response Headers
 

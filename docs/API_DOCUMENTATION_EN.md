@@ -210,6 +210,7 @@ The API implements rate limiting to prevent abuse:
 | Password Changes | 5 requests per hour |
 | General Operations | 30 requests per minute |
 | Admin Operations | 20 requests per hour |
+| Health Check (`/api/status`) | No limit (exempt) |
 
 ### Rate Limit Response Headers
 
