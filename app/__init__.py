@@ -1,7 +1,8 @@
 import os
 import logging
 from logging.handlers import RotatingFileHandler
-from flask import Flask
+from flask import Flask, request
+from flask_login import current_user, login_user
 from .extensions import db, migrate, login_manager, jwt, cors, limiter, compress
 from .main import main_bp
 from .api import api_bp
@@ -83,6 +84,10 @@ def create_app(config_object='config.Config'):
     def inject_printer_config():
         return {'printer_enabled': app.config.get('PRINTER_ENABLED', False)}
 
+    @app.context_processor
+    def inject_auto_login():
+        return {'auto_login_enabled': app.config.get('AUTO_LOGIN', False)}
+
     # Blueprints registrieren
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
@@ -121,5 +126,23 @@ def create_app(config_object='config.Config'):
                     db.session.add(admin)
                     db.session.commit()
                 app._admin_created = True
+
+        @app.before_request
+        def auto_login_admin():
+            """In Auto-Login-Modus den Admin transparent in die Session loggen.
+
+            API-Pfade werden ausgeschlossen: dort wird JWT erwartet, eine
+            Session-Identität würde die Token-Validierung nicht ersetzen und
+            könnte Tests/externe Clients verwirren.
+            """
+            if not app.config.get('AUTO_LOGIN', False):
+                return
+            if request.path.startswith('/api/'):
+                return
+            if current_user.is_authenticated:
+                return
+            admin = User.query.filter_by(username='admin').first()
+            if admin is not None:
+                login_user(admin)
 
     return app

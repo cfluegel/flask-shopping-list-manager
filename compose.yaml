@@ -67,6 +67,7 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
       DATABASE_URL: postgresql://${DB_USER:-grocery_user}:${DB_PASSWORD:-changeme}@db:5432/${DB_NAME:-grocery_db}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://your-domain.com}
+      AUTO_LOGIN: ${AUTO_LOGIN:-false}
       RATELIMIT_STORAGE_URL: redis://redis:6379/0
       PORT: "8000"
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}

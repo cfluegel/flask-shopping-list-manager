@@ -42,6 +42,8 @@ def index():
 @limiter.limit("5 per minute", methods=["POST"])
 def login():
     """User login page."""
+    if current_app.config.get('AUTO_LOGIN', False):
+        return redirect(url_for('main.dashboard'))
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
 
@@ -72,6 +74,9 @@ def login():
 @login_required
 def logout():
     """User logout."""
+    if current_app.config.get('AUTO_LOGIN', False):
+        flash('Abmelden im Auto-Login-Modus deaktiviert.', 'info')
+        return redirect(url_for('main.dashboard'))
     username = current_user.username
     user_id = current_user.id
     logout_user()

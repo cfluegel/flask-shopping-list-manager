@@ -39,6 +39,11 @@ class Config:
     LOG_FILE_MAX_BYTES = 10 * 1024 * 1024  # 10MB
     LOG_FILE_BACKUP_COUNT = 5
 
+    # Auto-Login (für vertrauenswürdige interne Netzwerke)
+    # Wenn aktiv: kein Login-Screen, jeder Aufruf ist automatisch als Admin
+    # eingeloggt. NUR in abgeschotteten Umgebungen aktivieren.
+    AUTO_LOGIN = os.environ.get('AUTO_LOGIN', 'False').lower() in ('true', '1', 'yes')
+
     # Receipt Printer Configuration
     PRINTER_ENABLED = os.environ.get('PRINTER_ENABLED', 'False').lower() in ('true', '1', 'yes')
     PRINTER_HOST = os.environ.get('PRINTER_HOST', '192.168.1.119')

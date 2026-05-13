@@ -4,12 +4,26 @@
  */
 class App {
   constructor() {
+    this._initAutoLogin();
     this._initTheme();
     this._initRoutes();
     this._initHeader();
     this._registerServiceWorker();
     router.start();
     App.checkPrinterStatus();
+  }
+
+  _initAutoLogin() {
+    if (!window.__AUTO_LOGIN__) return;
+    authManager.setTokens(
+      window.__AUTO_LOGIN__.access_token,
+      window.__AUTO_LOGIN__.refresh_token
+    );
+    authManager.setUser(window.__AUTO_LOGIN__.user);
+    // Falls die Seite mit #/login geöffnet wurde, direkt zu den Listen springen.
+    if (window.location.hash === '' || window.location.hash === '#/' || window.location.hash === '#/login') {
+      window.location.hash = '#/lists';
+    }
   }
 
   _initRoutes() {
@@ -19,10 +33,15 @@ class App {
   }
 
   _initHeader() {
-    document.getElementById('logout-btn').addEventListener('click', async () => {
-      await apiClient.logout();
-      router.navigate('#/login');
-    });
+    const logoutBtn = document.getElementById('logout-btn');
+    if (window.__AUTO_LOGIN__) {
+      logoutBtn.style.display = 'none';
+    } else {
+      logoutBtn.addEventListener('click', async () => {
+        await apiClient.logout();
+        router.navigate('#/login');
+      });
+    }
 
     document.getElementById('theme-btn').addEventListener('click', () => {
       this._toggleTheme();

@@ -76,6 +76,16 @@
     <div class="pwa-toast-container" id="toast-container"></div>
   </div>
 
+  {% if auto_login %}
+  <script>
+    window.__AUTO_LOGIN__ = {
+      access_token: {{ access_token|tojson }},
+      refresh_token: {{ refresh_token|tojson }},
+      user: {{ user|tojson }}
+    };
+  </script>
+  {% endif %}
+
   <!-- Scripts -->
   <script src="{{ url_for('static', filename='pwa/js/auth.js') }}"></script>
   <script src="{{ url_for('static', filename='pwa/js/api.js') }}"></script>
